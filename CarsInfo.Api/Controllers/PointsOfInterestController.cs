@@ -9,15 +9,34 @@ namespace CarsInfo.Api.Controllers
     [ApiController]
     public class PointsOfInterestController : ControllerBase
     {
-        [HttpGet]
-        public ActionResult<IEnumerable<PointOfInterestDto>> GetPointsOfInterest(int carId)
+
+        private readonly ILogger<PointsOfInterestController> _logger;
+        public PointsOfInterestController(ILogger<PointsOfInterestController> logger)
         {
-            var car = CarsDataStroe.Current.Cars.FirstOrDefault(x => x.Id == carId);
-            if (car == null)
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
+        [HttpGet]
+        public ActionResult<IEnumerable<List<PointOfInterestDto>>> GetPointsOfInterest(int carId)
+        {
+            throw new Exception("Sample");
+            try
             {
-                return NotFound();
+                var car = CarsDataStroe.Current.Cars.FirstOrDefault(x => x.Id == carId);
+                if (car == null)
+                {
+                    return NotFound();
+                }
+                _logger.LogInformation($"Points of interest for car with id {carId} were requested.");
+                return Ok(car.PointsOfInterest.FirstOrDefault());
+
             }
-            return Ok(car.PointsOfInterest);
+            catch (Exception exception)
+            {
+
+                _logger.LogCritical($"Exception while getting points of interest for car with id {carId}.", exception);
+                return StatusCode(500, "A problem happened while handling your request.");
+            }
         }
 
         [HttpGet("{pointofinterestid}", Name = "GetPointOfInterest")]
@@ -123,7 +142,7 @@ namespace CarsInfo.Api.Controllers
 
             return NoContent();
         }
-        [HttpDelete]
+        [HttpDelete("{poi}")]
         public ActionResult DeletePointOfInterest(int carId, int pointOfInterestId)
         {
             var car = CarsDataStroe.Current.Cars.FirstOrDefault(c => c.Id == carId);

@@ -204,4 +204,4 @@
     For example, sending a POST request to an endpoint that only has a [HttpGet] method (or sending
     GET to a POST-only action). The route matches, but no action accepts that verb, so the server
     returns 405. Fix: use the correct verb (e.g. POST to a [HttpPost] action, GET to a [HttpGet] action).
-25.
+25.Logger is built in services. so we dont need to register it in program cs class.
