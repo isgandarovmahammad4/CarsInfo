@@ -205,3 +205,23 @@
     GET to a POST-only action). The route matches, but no action accepts that verb, so the server
     returns 405. Fix: use the correct verb (e.g. POST to a [HttpPost] action, GET to a [HttpGet] action).
 25.Logger is built in services. so we dont need to register it in program cs class.
+26. Why the Serilog logs folder was not created.
+
+    No folder appeared because nothing was ever being written to Serilog. You built the Serilog logger,
+    but ASP.NET Core was never told to use it:
+
+        builder.Logging.ClearProviders();
+        builder.Logging.AddConsole();
+
+    Those two lines remove the default logging and add Microsoft's own console logger. So every
+    ILogger<T> message went to that console logger, and Log.Logger sat unused. Serilog's daily rolling
+    file sink only creates the folder and file when the first message reaches it, so with no messages
+    there was no folder.
+
+    I replaced those two lines in CarsInfo.Api/Program.cs with:
+
+        builder.Host.UseSerilog();
+
+    That sends all framework and controller logs through your Serilog setup. Serilog's .WriteTo.Console()
+    covers the console output, so you don't need AddConsole() anymore.
+27. Scoped will used for context and repository.

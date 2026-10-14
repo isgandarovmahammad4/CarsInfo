@@ -11,9 +11,11 @@ namespace CarsInfo.Api.Controllers
     {
 
         private readonly ILogger<PointsOfInterestController> _logger;
-        public PointsOfInterestController(ILogger<PointsOfInterestController> logger)
+        private readonly CarsInfo.Api.Services.LocalMailService _localMailService;
+        public PointsOfInterestController(ILogger<PointsOfInterestController> logger, CarsInfo.Api.Services.LocalMailService localMailService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _localMailService = localMailService ?? throw new ArgumentNullException(nameof(localMailService));
         }
 
         [HttpGet]
@@ -156,6 +158,7 @@ namespace CarsInfo.Api.Controllers
                 return NotFound();
             }
             car.PointsOfInterest.Remove(poi);
+            _localMailService.Send("Point of interest deleted.", $"Point of interest {poi.Name} with id {poi.Id} was deleted.");
             return NoContent();
         }
     }
