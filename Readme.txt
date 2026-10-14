@@ -225,3 +225,22 @@
     That sends all framework and controller logs through your Serilog setup. Serilog's .WriteTo.Console()
     covers the console output, so you don't need AddConsole() anymore.
 27. Scoped will used for context and repository.
+28. "Unable to resolve service for type 'IMailService'" error (500).
+
+    The error happens because the controller asks for IMailService, but you only registered the
+    concrete classes:
+
+        builder.Services.AddTransient<LocalMailService>();
+
+    That registration only answers requests for LocalMailService itself. The DI container doesn't
+    connect an interface to a class that implements it, so when it tried to build
+    PointsOfInterestController(..., IMailService mailService) it found nothing for IMailService and
+    returned a 500.
+
+    I changed both registrations in Program.cs to map the interface to the class:
+
+        #if DEBUG
+        builder.Services.AddTransient<CarsInfo.Api.Services.IMailService, CarsInfo.Api.Services.LocalMailService>();
+        #else
+        builder.Services.AddTransient<CarsInfo.Api.Services.IMailService, CarsInfo.Api.Services.CloudMailService>();
+        #endif

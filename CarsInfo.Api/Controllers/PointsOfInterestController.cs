@@ -11,11 +11,16 @@ namespace CarsInfo.Api.Controllers
     {
 
         private readonly ILogger<PointsOfInterestController> _logger;
-        private readonly CarsInfo.Api.Services.LocalMailService _localMailService;
-        public PointsOfInterestController(ILogger<PointsOfInterestController> logger, CarsInfo.Api.Services.LocalMailService localMailService)
+        private readonly CarsInfo.Api.Services.IMailService _mailService;
+        private readonly CarsDataStroe _carsdataStore;
+        public PointsOfInterestController(ILogger<PointsOfInterestController> logger, 
+            CarsInfo.Api.Services.IMailService mailService,
+            CarsDataStroe carsdataStore)
+
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _localMailService = localMailService ?? throw new ArgumentNullException(nameof(localMailService));
+            _mailService = mailService ?? throw new ArgumentNullException(nameof(mailService));
+            _carsdataStore = carsdataStore ?? throw new ArgumentNullException(nameof(carsdataStore));
         }
 
         [HttpGet]
@@ -24,7 +29,7 @@ namespace CarsInfo.Api.Controllers
             throw new Exception("Sample");
             try
             {
-                var car = CarsDataStroe.Current.Cars.FirstOrDefault(x => x.Id == carId);
+                var car = _carsdataStore.Cars.FirstOrDefault(x => x.Id == carId);
                 if (car == null)
                 {
                     return NotFound();
@@ -44,7 +49,7 @@ namespace CarsInfo.Api.Controllers
         [HttpGet("{pointofinterestid}", Name = "GetPointOfInterest")]
         public ActionResult<IEnumerable<PointOfInterestDto>> GetPointOfInterest(int carId, int pointofinterestid)
         {
-            var car = CarsDataStroe.Current.Cars.FirstOrDefault(x => x.Id == carId);
+            var car = _carsdataStore.Cars.FirstOrDefault(x => x.Id == carId);
             if (car == null)
             {
                 return NotFound("Car isnt exist.");
@@ -64,12 +69,12 @@ namespace CarsInfo.Api.Controllers
             {
                 return BadRequest();
             }
-            var car = CarsDataStroe.Current.Cars.FirstOrDefault(x => x.Id == carId);
+            var car = _carsdataStore.Cars.FirstOrDefault(x => x.Id == carId);
             if (car == null)
             {
                 return NotFound("Car isnt exist.");
             }
-            var maxPointOfInterest = CarsDataStroe.Current.Cars.SelectMany(x => x.PointsOfInterest).Max(x => x.Id);
+            var maxPointOfInterest = _carsdataStore.Cars.SelectMany(x => x.PointsOfInterest).Max(x => x.Id);
 
             var finalPointOfInterest = new PointOfInterestDto
             {
@@ -91,7 +96,7 @@ namespace CarsInfo.Api.Controllers
         [HttpPatch]
         public ActionResult<PointOfInterestDto> PartiallyUpdatePointsOfInterest(int carId, int pointOfInterestId, JsonPatchDocument<PointOfInterestForUpdateDto> patchDocument)
         {
-            var car = CarsDataStroe.Current.Cars.FirstOrDefault(x => x.Id == carId);
+            var car = _carsdataStore.Cars.FirstOrDefault(x => x.Id == carId);
             if (car == null)
             {
                 return NotFound("Car isnt exist.");
@@ -129,7 +134,7 @@ namespace CarsInfo.Api.Controllers
         [HttpPut("pointofinterestid")]
         public ActionResult<PointOfInterestDto> UpdatePointOfInterest(int carId, int pointOfInterestId, PointOfInterestForUpdateDto updateDto)
         {
-            var car = CarsDataStroe.Current.Cars.FirstOrDefault(c => c.Id == carId);
+            var car = _carsdataStore.Cars.FirstOrDefault(c => c.Id == carId);
             if (car == null)
             {
                 return NotFound();
@@ -147,7 +152,7 @@ namespace CarsInfo.Api.Controllers
         [HttpDelete("{poi}")]
         public ActionResult DeletePointOfInterest(int carId, int pointOfInterestId)
         {
-            var car = CarsDataStroe.Current.Cars.FirstOrDefault(c => c.Id == carId);
+            var car = _carsdataStore.Cars.FirstOrDefault(c => c.Id == carId);
             if (car == null)
             {
                 return NotFound();
@@ -158,7 +163,7 @@ namespace CarsInfo.Api.Controllers
                 return NotFound();
             }
             car.PointsOfInterest.Remove(poi);
-            _localMailService.Send("Point of interest deleted.", $"Point of interest {poi.Name} with id {poi.Id} was deleted.");
+            _mailService.Send("Point of interest deleted.", $"Point of interest {poi.Name} with id {poi.Id} was deleted.");
             return NoContent();
         }
     }

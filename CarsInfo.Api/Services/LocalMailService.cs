@@ -1,6 +1,6 @@
 ﻿namespace CarsInfo.Api.Services
 {
-    public class LocalMailService
+    public class LocalMailService : IMailService
     {
         public string _mailTo { get; set; }
         public string _mailFrom { get; set; }

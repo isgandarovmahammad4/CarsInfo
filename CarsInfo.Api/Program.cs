@@ -1,3 +1,4 @@
+using CarsInfo.Api;
 using Microsoft.AspNetCore.StaticFiles;
 using Serilog;
 
@@ -20,9 +21,12 @@ builder.Services.AddControllers(options =>
     .AddXmlDataContractSerializerFormatters();
 
 builder.Services.AddProblemDetails();
-builder.Services.AddTransient<CarsInfo.Api.Services.LocalMailService>();
-
-
+#if DEBUG
+builder.Services.AddTransient<CarsInfo.Api.Services.IMailService, CarsInfo.Api.Services.LocalMailService>();
+#else
+builder.Services.AddTransient<CarsInfo.Api.Services.IMailService, CarsInfo.Api.Services.CloudMailService>();
+#endif
+builder.Services.AddSingleton<CarsDataStroe>();
 //builder.Services.AddProblemDetails(options =>
 //{
 //    options.CustomizeProblemDetails = ctx =>

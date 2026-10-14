@@ -5,7 +5,7 @@ namespace CarsInfo.Api
     public class CarsDataStroe
     {
         public List<CarDto> Cars { get; set; }
-        public static CarsDataStroe Current { get; } = new CarsDataStroe();
+        //public static CarsDataStroe Current { get; } = new CarsDataStroe();
         public CarsDataStroe()
         {
             Cars = new List<CarDto>
