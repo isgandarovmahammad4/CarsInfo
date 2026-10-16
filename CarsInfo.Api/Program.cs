@@ -1,5 +1,7 @@
 using CarsInfo.Api;
+using CarsInfo.Api.DbContexts;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -27,6 +29,24 @@ builder.Services.AddTransient<CarsInfo.Api.Services.IMailService, CarsInfo.Api.S
 builder.Services.AddTransient<CarsInfo.Api.Services.IMailService, CarsInfo.Api.Services.CloudMailService>();
 #endif
 builder.Services.AddSingleton<CarsDataStroe>();
+//we can now path dbcontext options and we can say we want to use sqlite on it. We need to provide a connection string. 
+//We can do that by using the configuration object that is available in the program.cs file. We can use the configuration object to get the connection string from the appsettings.json file. 
+//So let's do that now. Let's add a connection string to the appsettings.json file. Let's call it "DefaultConnection". The value of the connection string will be "Data Source=CarsInfo.db". 
+//This will create a sqlite database file called CarsInfo.db in the root of the project. Now we can use this connection string in our program.cs file.
+//We can use the configuration object to get the connection string and pass it to the UseSqlite method.
+builder.Services.AddDbContext<CarContext>((IServiceProvider provider, DbContextOptionsBuilder optionsBuilder) =>
+{
+    optionsBuilder.UseSqlite("Data Source=CarsInfo.db");
+});
+
+//Bunu bele de yazmaq olar
+
+//builder.Services.AddDbContext<CarContext>(optionsBuilder =>
+//{
+//    optionsBuilder.UseSqlite("Data Source=CarsInfo.db");
+//});
+
+
 //builder.Services.AddProblemDetails(options =>
 //{
 //    options.CustomizeProblemDetails = ctx =>
