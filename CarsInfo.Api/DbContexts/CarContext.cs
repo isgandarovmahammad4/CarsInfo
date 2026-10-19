@@ -17,7 +17,12 @@ namespace CarsInfo.Api.DbContexts
         //    base.OnConfiguring(optionsBuilder);
         //}
 
+        public CarContext(DbContextOptions<CarContext> options) : base(options)
+        {
+            
+        }
+
         //second way is doing htis via constructor of decompiled DbContext class. That constructor takes a DbContextOptions parameter, dbcontextOptions. We can use that to pass in the connection string. This is the preferred way of doing it.
     }   // So lets add a constructor to our CarContext that calls this constructor overload. Now we can provide these options at the moment when we register our DbContext in the program cs dependency injection container. So let's do that in the program.cs file.
-        
+
 }
