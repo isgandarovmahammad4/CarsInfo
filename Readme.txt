@@ -244,3 +244,775 @@
         #else
         builder.Services.AddTransient<CarsInfo.Api.Services.IMailService, CarsInfo.Api.Services.CloudMailService>();
         #endif
+29. IEnumerable vs IQueryable (repository-dən nə qaytarmaq lazımdır).
+
+    IEnumerable<City> - repository sorğunu bazada özü icra edir və hazır nəticəni qaytarır.
+    Sonradan yazılan Where, OrderBy yaddaşda (C# tərəfində) işləyir, bazaya getmir.
+
+        IEnumerable<City> GetCities();
+        var cities = repo.GetCities()                    // SELECT * FROM Cities -> hamısı yaddaşa gəlir
+                         .Where(c => c.Name == "Baku");  // filtr yaddaşda olur
+
+    IQueryable<City> - hələ icra olunmamış sorğu qaytarır. Controller üzərinə Where, OrderBy
+    əlavə edə bilir və hamısı bir SQL sorğusuna çevrilib bazada icra olunur.
+
+        IQueryable<City> GetCities();
+        var cities = repo.GetCities()
+                         .Where(c => c.Name == "Baku")
+                         .ToList();   // SQL yalnız burada gedir: SELECT ... WHERE Name = 'Baku'
+
+    Mübahisə:
+    - IQueryable rahatdır, amma persistence məntiqi repository-dən "sızır" (leak), yəni controller
+      sorğu qurur. Bu, repository pattern-in məqsədinə ziddir.
+    - IEnumerable pattern-ə uyğundur, amma çox filter/sort/paging olan böyük API-da onlarla metod
+      yazmaq lazım gəlir.
+    - DbContext özü də bir repository-dir və IQueryable qaytarır.
+    Kursda API sadə olduğu üçün IEnumerable seçilir.
+
+    Async versiya:
+
+        Task<IEnumerable<City>> GetCitiesAsync();
+
+    Task metodun asinxron olduğunu bildirir: baza cavab verənə qədər thread bloklanmır və başqa
+    sorğulara xidmət edə bilir. Metod adı Async ilə bitir. Bu, .NET-də qəbul olunmuş qaydadır.
+30. Sync, async və Task.
+
+    ## 1. Thread nədir?
+
+    **Thread** proqramda kodu icra edən "işçi"dir. ASP.NET Core-da hər gələn HTTP sorğusunu **thread pool**-dan götürülən bir thread emal edir. Thread pool hazır işçilər hovuzudur. Bu işçilərin sayı **məhduddur**.
+
+    ## 2. Sinxron (sync) kod
+
+    ```csharp
+    public IEnumerable<Car> GetCars()
+    {
+        return _context.Cars.ToList();   // bazadan cavab gələnə qədər GÖZLƏYİR
+    }
+    ```
+
+    Bazaya sorğu getdikdən sonra cavab, tutaq ki, 200 ms-də gəlir. Bu müddət ərzində thread **heç nə etmir, sadəcə gözləyir (bloklanır)**. Amma başqa işə də götürülə bilmir.
+
+    **Restoran misalı:** ofisiant sifarişi mətbəxə verir və yemək hazır olana qədər mətbəxin qapısında dayanır. Başqa masalara xidmət etmir.
+
+    Az sorğu olanda bu problem deyil. Amma 1000 istifadəçi eyni anda gələndə bütün thread-lər gözləməkdə olur. Yeni sorğular növbəyə düşür və API yavaşlayır (**thread pool starvation**).
+
+    ## 3. Asinxron (async) kod
+
+    ```csharp
+    public async Task<IEnumerable<Car>> GetCarsAsync()
+    {
+        return await _context.Cars.ToListAsync();
+    }
+    ```
+
+    Sorğu bazaya göndərilir. `await` yerində thread **sərbəst buraxılır və pool-a qayıdır**, orada başqa sorğulara xidmət edə bilir. Baza cavab verəndə pool-dan bir thread (eyni olmaya da bilər) götürülür və kod `await`-dən sonrakı sətirdən davam edir.
+
+    **Restoran misalı:** ofisiant sifarişi mətbəxə verir, gedib başqa masalara xidmət edir. Yemək hazır olanda onu götürüb aparır.
+
+    > Vacib məqam: async kodu **daha sürətli etmir**. Bir sorğu yenə 200 ms çəkir. Async **miqyaslanmanı (scalability)** artırır, yəni eyni sayda thread ilə daha çox sorğuya xidmət etmək olur.
+
+    ## 4. Task nədir?
+
+    `Task` **"gələcəkdə bitəcək bir iş"** deməkdir, yəni bir vəd (promise).
+
+    | Tip | Mənası |
+    |---|---|
+    | `void` | sync metod, heç nə qaytarmır |
+    | `Task` | async metod, heç nə qaytarmır (async-in `void`-i) |
+    | `T` | sync metod, `T` qaytarır |
+    | `Task<T>` | async metod, bitəndə `T` qaytaracaq |
+
+    ```csharp
+    Task<IEnumerable<Car>> task = repo.GetCarsAsync(); // iş başladı, hələ nəticə yoxdur
+    IEnumerable<Car> cars = await task;                // nəticəni gözlə və götür
+    ```
+
+    ## 5. async və await açar sözləri
+
+    - **`async`**: metoda "içində `await` istifadə edə bilərsən" deyir. Kompilyator metodu xüsusi formaya (state machine) çevirir.
+    - **`await`**: "bu Task bitənə qədər gözlə, amma thread-i bloklama" deməkdir. Task-ın içindəki nəticəni də açıb verir (`Task<T>` → `T`).
+
+    `async` ilə `await` həmişə cüt istifadə olunur. `await` yazmaq üçün metod `async` olmalıdır.
+
+    ## 6. "Async all the way" qaydası
+
+    Async bir zəncir kimi yuxarıya qədər gedir:
+
+    ```csharp
+    // Repository
+    public async Task<IEnumerable<Car>> GetCarsAsync()
+        => await _context.Cars.ToListAsync();
+
+    // Controller
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<CarDto>>> GetCars()
+    {
+        var cars = await _repository.GetCarsAsync();
+        return Ok(cars);
+    }
+    ```
+
+    **Bunu etmə:**
+
+    ```csharp
+    var cars = _repository.GetCarsAsync().Result;   // ❌
+    _repository.GetCarsAsync().Wait();              // ❌
+    ```
+
+    `.Result` və `.Wait()` thread-i yenə bloklayır, ona görə async-in bütün faydası itir. Bəzi hallarda bu **deadlock**-a da səbəb ola bilər.
+
+    ## 7. Nə vaxt async istifadə etməli?
+
+    - ✅ **I/O əməliyyatları**, yəni gözləmə tələb edən işlər: verilənlər bazası, HTTP sorğuları, fayl oxuma/yazma. Repository üçün tam uyğundur.
+    - ❌ **CPU-ya ağır hesablamalar** (məsələn, böyük dövrlər). Burada gözləmə yoxdur, thread onsuz da işləyir, ona görə async heç bir fayda vermir.
+
+    ## 8. Adlandırma qaydası
+
+    Async metodların adı `Async` ilə bitir: `GetCarsAsync`, `SaveChangesAsync`, `ToListAsync`. Bu, .NET-də qəbul olunmuş konvensiyadır və çağıranın `await` etməli olduğunu bildirir.
+
+    ---
+
+    **Videodakı "should we or shouldn't we?" sualının cavabı:** API-də bazaya müraciət I/O əməliyyatıdır. Ona görə repository metodlarını **async** yazmaq lazımdır, yəni `Task<IEnumerable<Car>> GetCarsAsync()`.
+31. IEnumerable vs IQueryable cədvəlinin izahı, nümunələr, Where/search və AND/OR.
+
+    # A. Cədvəlin izahı
+
+    ## Sətir 1: Rahatlıq
+
+    **IEnumerable ilə:** controller-in nəyə ehtiyacı varsa, repository-də onun üçün **hazır metod** olmalıdır.
+
+    ```csharp
+    public interface ICarInfoRepository
+    {
+        Task<IEnumerable<Car>> GetCarsAsync();
+        Task<IEnumerable<Car>> GetCarsByBrandAsync(string brand);
+        Task<IEnumerable<Car>> GetCarsOrderedByYearAsync();
+        Task<IEnumerable<Car>> GetCarsByBrandOrderedByYearAsync(string brand);
+        // yeni ehtiyac çıxdıqca yeni metod...
+    }
+    ```
+
+    Controller yeni filtr istəyirsə, əvvəlcə repository-yə yeni metod yazılmalıdır. Buna görə "az çevik" deyilir.
+
+    **IQueryable ilə:** bir metod kifayətdir, controller qalanını özü qurur:
+
+    ```csharp
+    IQueryable<Car> GetCars();
+
+    // Controller-də:
+    var result = await _repo.GetCars()
+        .Where(c => c.Brand == "BMW")
+        .OrderBy(c => c.Year)
+        .ToListAsync();
+    ```
+
+    Repository-yə toxunmadan istənilən kombinasiyanı yazmaq olur. Buna görə "çox çevik" deyilir.
+
+    ## Sətir 2: Repository pattern
+
+    Əvvəlcə **repository pattern-in məqsədini** xatırlayaq. Məqsəd bazaya aid bütün işləri (sorğular, EF Core, SQL) **bir yerdə gizlətməkdir**. Controller yalnız bunu bilməlidir: "mənə maşınları ver". Necə gətirildiyi onu maraqlandırmamalıdır.
+
+    **IEnumerable ilə bu məqsədə çatılır:**
+
+    - Bütün sorğu məntiqi repository-nin içindədir.
+    - Controller EF Core haqqında heç nə bilmir.
+    - Sabah EF Core-u Dapper-ə və ya başqa bir API-yə dəyişsən, yalnız repository dəyişir.
+    - Test yazmaq asandır: repository-ni sadə bir siyahı qaytaran mock ilə əvəz edirsən.
+
+    **IQueryable ilə məntiq "sızır" (leak):**
+
+    - Controller `Where`, `OrderBy`, `Include` yazır, yəni **sorğu qurmağa başlayır**. Bazaya aid məntiq repository-dən çıxıb controller-ə yayılır.
+    - Controller-də `ToListAsync()` çağırılır. Bu EF Core metodudur, deməli controller EF Core-dan asılı olur.
+    - Bəzi C# ifadələri SQL-ə çevrilə bilmir. Məsələn, `Where(c => MyHelper.Check(c))` **runtime-da xəta** verir. Bu xəta controller-də çıxır, halbuki problem bazaya aiddir.
+    - Abstraksiya qorunmur: repository var, amma faktiki olaraq controller bazaya birbaşa sorğu yazır.
+
+    Buna görə "pattern-in məqsədinə zidd" deyilir.
+
+    ## Sətir 3: Böyük API
+
+    İndi əks tərəfə baxaq. Tutaq ki, API istifadəçiyə belə imkanlar verir:
+
+    ```
+    GET /api/cars?brand=BMW&minYear=2015&maxPrice=30000&sort=price_desc&page=2&pageSize=20&fields=name,price
+    ```
+
+    Burada filter, sort, paging və field seçimi (**data shaping**) var. Bu parametrlərin **hər kombinasiyası** fərqli sorğu deməkdir.
+
+    **IEnumerable ilə:** hər kombinasiya üçün ayrıca metod yazmaq mümkün deyil, çünki onlarla, yüzlərlə variant alınır. Praktikada belə edirlər: bütün parametrləri bir obyektə toplayıb **repository-nin içində** dinamik sorğu qururlar:
+
+    ```csharp
+    Task<IEnumerable<Car>> GetCarsAsync(CarQueryParameters parameters);
+    ```
+
+    Bu həm pattern-i qoruyur, həm də metod partlayışının qarşısını alır. Kursun sonrakı hissələrində yəqin ki, filter və paging məhz belə əlavə olunacaq.
+
+    **IQueryable ilə:** bu cür API-də onun "sızan" olması bəzən **faydaya çevrilir**. Hər yeni parametri controller-də (və ya ayrıca bir servisdə) bir `Where` sətri ilə əlavə edirsən. Bəzi komandalar rahatlıq üçün bu güzəştə gedir.
+
+    ## Yekun
+
+    | Vəziyyət | Seçim |
+    |---|---|
+    | Sadə API, az sorğu (kursdakı kimi) | `IEnumerable` |
+    | Çox filter/sort/paging | `IEnumerable` + parametr obyekti (pattern qorunur) |
+    | Komanda rahatlığa üstünlük verir və leak-i qəbul edir | `IQueryable` |
+
+    Videodakı əsas fikir də budur: **hər iki yanaşma real layihələrdə istifadə olunur, mütləq "düzgün" cavab yoxdur.** Kurs sadə API qurduğu üçün `IEnumerable` seçir.
+
+    # B. Nümunələr (Car entity və CarContext ilə)
+
+    **Məqsəd:** API belə sorğuları qəbul etsin:
+
+    ```
+    GET /api/cars?name=BMW
+    GET /api/cars?searchQuery=sport
+    GET /api/cars?searchQuery=sport&orderBy=name&pageNumber=2&pageSize=5
+    ```
+
+    ## Yanaşma 1: IEnumerable + parametr obyekti (pattern qorunur)
+
+    ### Addım 1: Parametr obyekti
+
+    Bütün mümkün parametrləri bir sinifə yığırıq:
+
+    ```csharp
+    // Models/CarQueryParameters.cs
+    namespace CarsInfo.Api.Models
+    {
+        public class CarQueryParameters
+        {
+            const int maxPageSize = 20;
+
+            public string? Name { get; set; }          // dəqiq ad filtri
+            public string? SearchQuery { get; set; }   // ad və ya təsvirdə axtarış
+            public string? OrderBy { get; set; }       // "name" və ya "description"
+            public int PageNumber { get; set; } = 1;
+
+            private int _pageSize = 10;
+            public int PageSize
+            {
+                get => _pageSize;
+                set => _pageSize = value > maxPageSize ? maxPageSize : value;
+            }
+        }
+    }
+    ```
+
+    **İzah:**
+    - Bütün sahələr `?` ilə nullable-dır, çünki istifadəçi istədiyi parametri göndərməyə bilər.
+    - `PageSize` üçün yuxarı hədd qoyulub. Kimsə `pageSize=1000000` göndərib bazanı yükləyə bilməsin.
+    - Yeni parametr lazım olanda **yalnız bu sinfə bir property əlavə edirsən**. Interface dəyişmir.
+
+    ### Addım 2: Repository interface
+
+    ```csharp
+    public interface ICarInfoRepository
+    {
+        Task<IEnumerable<Car>> GetCarsAsync();
+        Task<IEnumerable<Car>> GetCarsAsync(CarQueryParameters parameters);
+    }
+    ```
+
+    Onlarla `GetCarsByNameAsync`, `GetCarsByNameOrderedAsync`... əvəzinə **bir metod** var.
+
+    ### Addım 3: Repository implementasiyası (əsas hissə)
+
+    ```csharp
+    public class CarInfoRepository : ICarInfoRepository
+    {
+        private readonly CarContext _context;
+
+        public CarInfoRepository(CarContext context)
+        {
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+        }
+
+        public async Task<IEnumerable<Car>> GetCarsAsync()
+        {
+            return await _context.Cars.OrderBy(c => c.Name).ToListAsync();
+        }
+
+        public async Task<IEnumerable<Car>> GetCarsAsync(CarQueryParameters parameters)
+        {
+            // 1) Başlanğıc: hələ heç bir sorğu icra olunmayıb
+            IQueryable<Car> collection = _context.Cars;
+
+            // 2) Filtr: yalnız parametr gəlibsə əlavə olunur
+            if (!string.IsNullOrWhiteSpace(parameters.Name))
+            {
+                var name = parameters.Name.Trim();
+                collection = collection.Where(c => c.Name == name);
+            }
+
+            // 3) Axtarış
+            if (!string.IsNullOrWhiteSpace(parameters.SearchQuery))
+            {
+                var search = parameters.SearchQuery.Trim();
+                collection = collection.Where(c => c.Name.Contains(search)
+                    || (c.Description != null && c.Description.Contains(search)));
+            }
+
+            // 4) Sıralama
+            collection = parameters.OrderBy?.ToLower() switch
+            {
+                "description" => collection.OrderBy(c => c.Description),
+                _             => collection.OrderBy(c => c.Name)
+            };
+
+            // 5) Paging
+            collection = collection
+                .Skip(parameters.PageSize * (parameters.PageNumber - 1))
+                .Take(parameters.PageSize);
+
+            // 6) YALNIZ BURADA bazaya sorğu gedir
+            return await collection.ToListAsync();
+        }
+    }
+    ```
+
+    **Addım-addım nə baş verir:**
+
+    1. `IQueryable<Car> collection = _context.Cars;`: bu sətir bazaya **heç nə göndərmir**. Bu, sadəcə "Cars cədvəlindən sorğu quracağam" deməkdir.
+    2. Hər `if` bloku sorğuya bir şərt **əlavə edir**, amma yenə heç nə icra olunmur. Sorğu sanki kağız üzərində yazılır.
+    3. `switch` ifadəsi sıralamanı seçir. Tanınmayan dəyər gəlsə, default olaraq ada görə sıralayır.
+    4. `Skip` və `Take` paging edir. `pageNumber=2, pageSize=5` üçün: ilk `5 * (2-1) = 5` qeydi keç, sonrakı 5-i götür.
+    5. `ToListAsync()` çağırılanda EF Core bütün yığılmış şərtləri **bir SQL sorğusuna** çevirir.
+
+    `?searchQuery=sport&pageNumber=2&pageSize=5` üçün yaranan SQL təxminən belədir:
+
+    ```sql
+    SELECT c.Id, c.Name, c.Description
+    FROM Cars AS c
+    WHERE c.Name LIKE '%sport%' OR (c.Description IS NOT NULL AND c.Description LIKE '%sport%')
+    ORDER BY c.Name
+    LIMIT 5 OFFSET 5
+    ```
+
+    > **Diqqət:** repository-nin **içində** `IQueryable` istifadə edirik. Bu tamamilə normaldır. Problem `IQueryable`-ı repository-dən **çölə qaytarmaqdadır**. Çölə hazır `IEnumerable` çıxır.
+
+    ### Addım 4: Controller
+
+    ```csharp
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<CarWithoutPointsOfInterestDto>>> GetCars(
+        [FromQuery] CarQueryParameters parameters)
+    {
+        var cars = await _carInfoRepository.GetCarsAsync(parameters);
+        return Ok(_mapper.Map<IEnumerable<CarWithoutPointsOfInterestDto>>(cars));
+    }
+    ```
+
+    **İzah:**
+    - `[FromQuery]` URL-dəki `?name=...&pageSize=...` dəyərlərini avtomatik olaraq `CarQueryParameters` obyektinə doldurur.
+    - Controller-də **heç bir** `Where`, `OrderBy` və ya `ToListAsync` yoxdur. O, EF Core haqqında heç nə bilmir.
+    - (`_mapper` və DTO adı nümunə üçündür. Kursda AutoMapper sonradan gələcək.)
+
+    ### Yeni parametr lazım olsa?
+
+    Məsələn, "yalnız PointOfInterest-i olan maşınlar" filtri:
+
+    ```csharp
+    // CarQueryParameters-ə:
+    public bool? HasPointsOfInterest { get; set; }
+
+    // Repository-yə bir if:
+    if (parameters.HasPointsOfInterest == true)
+    {
+        collection = collection.Where(c => c.PointsOfInterests.Any());
+    }
+    ```
+
+    Interface və controller **dəyişmir**. Metod partlayışı yoxdur.
+
+    ## Yanaşma 2: IQueryable qaytarmaq (rahatlıq, amma leak)
+
+    ### Repository
+
+    ```csharp
+    public interface ICarInfoRepository
+    {
+        IQueryable<Car> GetCars();
+    }
+
+    public class CarInfoRepository : ICarInfoRepository
+    {
+        private readonly CarContext _context;
+        public CarInfoRepository(CarContext context) => _context = context;
+
+        public IQueryable<Car> GetCars() => _context.Cars;
+    }
+    ```
+
+    Repository çox sadədir, demək olar ki, heç nə etmir. Metodun `async` olmadığına diqqət edin. O, sorğu icra etmir, sadəcə sorğunun "başlanğıcını" qaytarır.
+
+    ### Controller (bütün iş burada)
+
+    ```csharp
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<Car>>> GetCars(
+        string? name, string? searchQuery, string? orderBy,
+        int pageNumber = 1, int pageSize = 10)
+    {
+        var query = _carInfoRepository.GetCars();
+
+        if (!string.IsNullOrWhiteSpace(name))
+            query = query.Where(c => c.Name == name.Trim());
+
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+            query = query.Where(c => c.Name.Contains(searchQuery)
+                || (c.Description != null && c.Description.Contains(searchQuery)));
+
+        query = orderBy == "description"
+            ? query.OrderBy(c => c.Description)
+            : query.OrderBy(c => c.Name);
+
+        var cars = await query
+            .Skip(pageSize * (pageNumber - 1))
+            .Take(Math.Min(pageSize, 20))
+            .ToListAsync();          // EF Core metodu controller-də!
+
+        return Ok(cars);
+    }
+    ```
+
+    **Nəticə eynidir.** Eyni SQL yaranır. Fərq yalnız kodun **harada** yazılmasındadır.
+
+    ### Burada "leak" konkret olaraq harada görünür?
+
+    1. **`using Microsoft.EntityFrameworkCore;`** controller-ə lazım olur, çünki `ToListAsync()` oradadır. Controller EF Core-dan asılı olur.
+    2. **Sorğu məntiqi controller-dədir.** Başqa bir controller də maşın axtarışı etsə, bu `Where`-ləri təkrar yazmalı olacaq (kod təkrarı).
+    3. **Runtime xətası riski.** Controller-də belə yazsan:
+       ```csharp
+       query = query.Where(c => IsSportCar(c));   // adi C# metodu
+       ```
+       kod kompilyasiya olunur, amma işə düşəndə EF Core bu metodu SQL-ə çevirə bilmir və `InvalidOperationException ... could not be translated` xətası verir. Bazaya aid xəta controller-də çıxır.
+    4. **Test çətinləşir.** `ToListAsync()` yalnız EF Core-un `IQueryable`-ında işləyir. Mock repository-dən adi `List<Car>().AsQueryable()` qaytarsan, `ToListAsync` xəta verir.
+
+    ### Bəs niyə bəzi komandalar bunu seçir?
+
+    - Kod azdır: parametr sinfi yoxdur, repository demək olar ki boşdur.
+    - Hər ekranın/endpoint-in öz xüsusi sorğusu varsa, hamısını repository-yə daşımaq yorucu olur.
+    - Bəziləri deyir: "`DbContext` onsuz da repository-dir, üstünə ikinci qat əlavə etməyə ehtiyac yoxdur." Onlar controller-də (və ya servis qatında) birbaşa `DbContext` istifadə edirlər.
+
+    ## Müqayisə
+
+    | | Yanaşma 1 (IEnumerable + parametr) | Yanaşma 2 (IQueryable) |
+    |---|---|---|
+    | Sorğu harada qurulur | Repository-nin içində | Controller-də |
+    | Controller EF Core bilirmi | Xeyr | Bəli (`ToListAsync`) |
+    | Yeni filtr əlavə etmək | Parametr sinfinə property + repository-yə bir `if` | Controller-ə bir `Where` |
+    | Kod təkrarı | Yoxdur, məntiq bir yerdədir | Hər controller öz sorğusunu yazır |
+    | Test | Asan | Çətin |
+    | Kod həcmi | Bir az çox | Az |
+
+    **Tövsiyə:** bu layihə üçün **Yanaşma 1** daha uyğundur. Kurs repository pattern öyrədir və bu yanaşma pattern-i qoruyur. Kursun sonrakı hissələrində filtr, axtarış və paging çox güman ki, məhz bu formada əlavə olunacaq.
+
+    # C. Where sətrinin izahı
+
+    ```csharp
+    collection = collection.Where(c => c.Name.Contains(search)
+        || (c.Description != null && c.Description.Contains(search)));
+    ```
+
+    **Bir cümlə ilə:** "Elə maşınları saxla ki, ya **adında**, ya da **təsvirində** axtarılan söz olsun."
+
+    ## 1. `collection.Where(...)`
+
+    `Where` **filtr** deməkdir. Kolleksiyadakı hər elementi yoxlayır və yalnız şərtə uyğun gələnləri saxlayır.
+
+    ## 2. `c => ...` (lambda)
+
+    `c` **hər bir maşını** təmsil edir. Adı istədiyin kimi qoya bilərsən (`car => ...` da olar).
+
+    `=>` işarəsindən sonra gələn hissə **şərtdir**. Nəticəsi `true` və ya `false` olur:
+    - `true` olarsa, maşın nəticədə qalır.
+    - `false` olarsa, maşın çıxarılır.
+
+    Yəni bu, "hər maşın `c` üçün sağ tərəfdəki şərti yoxla" deməkdir.
+
+    ## 3. `c.Name.Contains(search)`
+
+    `Contains` mətnin içində başqa bir mətnin olub-olmadığını yoxlayır.
+
+    ```csharp
+    "BMW Sport".Contains("Sport")   // true
+    "Audi A4".Contains("Sport")     // false
+    ```
+
+    ## 4. `||` (VƏ YA)
+
+    `||` iki şərtdən **ən azı biri** doğrudursa `true` qaytarır:
+
+    | Sol tərəf | Sağ tərəf | Nəticə |
+    |---|---|---|
+    | true | true | true |
+    | true | false | true |
+    | false | true | true |
+    | false | false | **false** |
+
+    Burada sol tərəf "ad uyğundur", sağ tərəf isə "təsvir uyğundur" deməkdir. Hər hansı biri uyğun gəlsə, maşın qalır.
+
+    ## 5. `(c.Description != null && c.Description.Contains(search))`
+
+    Bu, ən çox çaşdıran hissədir.
+
+    `&&` (**VƏ**) yalnız **hər iki** şərt doğru olanda `true` qaytarır.
+
+    **Niyə `!= null` yoxlaması lazımdır?** Bazada bəzi maşınların təsviri boş (`NULL`) ola bilər. Əgər `Description` null olsa və birbaşa `null.Contains("sport")` yazılsa, C# **`NullReferenceException`** verər, çünki olmayan bir şeyin üzərində metod çağırmaq olmur.
+
+    `&&` operatorunun xüsusiyyəti (**short-circuit**) budur: sol tərəf `false` olarsa, sağ tərəfə **heç baxılmır**, çünki nəticə onsuz da `false` olacaq. Deməli:
+    - `Description` null olarsa, `c.Description != null` → `false` olur, `Contains` heç çağırılmır və xəta yaranmır.
+    - `Description` null deyilsə, `Contains` yoxlanılır.
+
+    Mötərizə `( )` bu iki şərti bir qrup edir ki, `||` ilə düzgün birləşsin.
+
+    ## 6. `collection = ...`
+
+    `Where` köhnə kolleksiyanı dəyişmir, **yeni** sorğu qaytarır. Ona görə nəticəni yenidən `collection`-a yazırıq. Belə olmasa, filtr itərdi.
+
+    ## Konkret misal
+
+    Bazada belə maşınlar olsun, `search = "sport"`:
+
+    | Name | Description | Ad uyğundurmu? | Təsvir uyğundurmu? | Nəticə |
+    |---|---|---|---|---|
+    | BMW sport | NULL | ✅ true | yoxlanmır, onsuz da true-dur | **qalır** |
+    | Audi A4 | comfortable sport sedan | ❌ false | ✅ true | **qalır** |
+    | Toyota Corolla | family car | ❌ false | ❌ false | çıxır |
+    | Kia Rio | NULL | ❌ false | null → false, `Contains` çağırılmır | çıxır |
+
+    > `||` operatorunda da short-circuit var: sol tərəf `true` olsa, sağ tərəfə baxılmır. Birinci sətirdə məhz bu baş verir.
+
+    ## Bazaya necə gedir?
+
+    Bu sorğu EF Core-da `IQueryable` üzərində yazıldığı üçün C#-da icra olunmur. EF Core onu **SQL-ə çevirir**:
+
+    ```sql
+    WHERE c.Name LIKE '%sport%'
+       OR (c.Description IS NOT NULL AND c.Description LIKE '%sport%')
+    ```
+
+    - `Contains` → `LIKE '%...%'`
+    - `||` → `OR`
+    - `&&` → `AND`
+    - `!= null` → `IS NOT NULL`
+
+    Qeyd: SQL-də `NULL LIKE '%sport%'` xəta vermir, sadəcə uyğun gəlmir. Ona görə bazada `!= null` yoxlaması texniki baxımdan vacib deyil. Amma C# kompilyatoru `Description`-un null ola biləcəyini bilir və xəbərdarlıq verir. Kod yaddaşda (`IEnumerable` üzərində) işləsə, həqiqətən xəta da yaranar. Buna görə yoxlamanı yazmaq yaxşı vərdişdir.
+
+    ## Daha oxunaqlı yazılış
+
+    Eyni məna, sadəcə ayrıca sətirlərlə:
+
+    ```csharp
+    collection = collection.Where(c =>
+        c.Name.Contains(search)                 // adında var
+        ||                                      // VƏ YA
+        (c.Description != null                  // təsvir boş deyil
+         && c.Description.Contains(search))     // VƏ təsvirdə var
+    );
+    ```
+
+    Və ya null-conditional operatoru ilə qısa forma:
+
+    ```csharp
+    collection = collection.Where(c => c.Name.Contains(search)
+        || (c.Description ?? "").Contains(search));
+    ```
+
+    `c.Description ?? ""` "təsvir null olarsa, boş mətn götür" deməkdir. Boş mətndə "sport" olmadığı üçün nəticə `false` olur və xəta yaranmır.
+
+    # D. search nədir?
+
+    `search` **entity deyil**. O, sadəcə bir **`string`** dəyişənidir, yəni istifadəçinin URL-də yazdığı axtarış sözüdür.
+
+    ## Haradan gəlir?
+
+    Kodda belə idi:
+
+    ```csharp
+    if (!string.IsNullOrWhiteSpace(parameters.SearchQuery))
+    {
+        var search = parameters.SearchQuery.Trim();
+        collection = collection.Where(c => c.Name.Contains(search) || ...);
+    }
+    ```
+
+    Yolu addım-addım izləyək:
+
+    **1. İstifadəçi sorğu göndərir:**
+    ```
+    GET /api/cars?searchQuery=  sport
+    ```
+
+    **2. `[FromQuery]` URL-dəki dəyəri obyektə yazır:**
+    ```csharp
+    public class CarQueryParameters
+    {
+        public string? SearchQuery { get; set; }   // = "  sport  "
+    }
+    ```
+
+    **3. Repository-də yerli dəyişən yaradılır:**
+    ```csharp
+    var search = parameters.SearchQuery.Trim();   // = "sport"
+    ```
+
+    - `var` burada `string` deməkdir. Kompilyator tipi sağ tərəfdən özü müəyyən edir. Bu sətir `string search = ...` ilə eynidir.
+    - `Trim()` əvvəldəki və sondakı boşluqları silir: `"  sport  "` → `"sport"`.
+
+    Yəni `search` sadəcə `"sport"` mətnidir.
+
+    ## Entity ilə fərqi
+
+    | | `c` | `search` |
+    |---|---|---|
+    | Nədir | `Car` entity-si (bazadakı bir sətir) | `string` (sadə mətn) |
+    | Haradan gəlir | Bazadakı `Cars` cədvəlindən | İstifadəçinin URL-dəki parametrindən |
+    | Dəyişirmi | Hər maşın üçün fərqlidir | Bütün sorğu boyu eynidir |
+
+    Lambda-da hər **maşının** (`c`) adını eyni **söz** (`search`) ilə müqayisə edirik:
+
+    ```csharp
+    c => c.Name.Contains(search)
+    //   ↑ Car     ↑ string   ↑ string
+    ```
+
+    `c.Name` də `string`-dir (`Car` sinfində `public string Name`). `Contains` bir mətnin içində başqa mətn axtarır.
+
+    ## Niyə birbaşa `parameters.SearchQuery` yazmadıq?
+
+    Belə də yazmaq olardı:
+
+    ```csharp
+    collection = collection.Where(c => c.Name.Contains(parameters.SearchQuery.Trim()));
+    ```
+
+    Amma ayrıca dəyişən daha yaxşıdır:
+    1. `Trim()` **bir dəfə** icra olunur, iki yerdə (`Name` və `Description` üçün) təkrarlanmır.
+    2. Kod qısa və oxunaqlı olur.
+
+    ## Bazaya necə gedir? (vacib bonus)
+
+    EF Core lambda-nın içindəki `search` dəyişənini görür və onu SQL-ə **parametr** kimi göndərir:
+
+    ```sql
+    -- @__search_0 = 'sport'
+    WHERE c.Name LIKE '%' + @__search_0 + '%'
+    ```
+
+    Mətn birbaşa SQL-in içinə yapışdırılmır. Bu, **SQL injection**-dan qoruyur. İstifadəçi `searchQuery='; DROP TABLE Cars; --` göndərsə belə, bu sadəcə axtarılan mətn kimi qəbul olunur, əmr kimi icra olunmur.
+
+    # E. Eyni vaxtda name = car1 və description = desc3 istənilsə?
+
+    Burada iki fərqli ehtiyac var və onlar fərqli həll olunur.
+
+    ## 1. `searchQuery` bunu edə bilmir
+
+    `searchQuery` **bir mətndir** və eyni mətni həm adda, həm təsvirdə axtarır (`OR`). Ona görə ad üçün bir söz, təsvir üçün başqa söz demək mümkün deyil.
+
+    İstifadəçi belə yazsa:
+
+    ```
+    GET /api/cars?searchQuery=car1 desc3
+    ```
+
+    `search = "car1 desc3"` olur və SQL belə alınır:
+
+    ```sql
+    WHERE Name LIKE '%car1 desc3%' OR Description LIKE '%car1 desc3%'
+    ```
+
+    Bu, **bütöv** `"car1 desc3"` mətnini axtarır. Heç bir maşının adında və ya təsvirində bu mətn tam şəkildə olmadığı üçün **nəticə boş qayıdır**.
+
+    ## 2. Həll: hər sahə üçün ayrıca parametr
+
+    "Adı car1 **VƏ** təsviri desc3 olan" demək üçün ayrıca parametrlər lazımdır:
+
+    ```csharp
+    public class CarQueryParameters
+    {
+        public string? Name { get; set; }          // ada görə filtr
+        public string? Description { get; set; }   // təsvirə görə filtr (YENİ)
+        public string? SearchQuery { get; set; }   // ümumi axtarış
+        // ... paging, orderBy
+    }
+    ```
+
+    Repository:
+
+    ```csharp
+    IQueryable<Car> collection = _context.Cars;
+
+    if (!string.IsNullOrWhiteSpace(parameters.Name))
+    {
+        var name = parameters.Name.Trim();
+        collection = collection.Where(c => c.Name == name);
+    }
+
+    if (!string.IsNullOrWhiteSpace(parameters.Description))
+    {
+        var description = parameters.Description.Trim();
+        collection = collection.Where(c => c.Description == description);
+    }
+    ```
+
+    Sorğu:
+
+    ```
+    GET /api/cars?name=car1&description=desc3
+    ```
+
+    SQL:
+
+    ```sql
+    WHERE Name = 'car1' AND Description = 'desc3'
+    ```
+
+    ## Əsas qayda: ardıcıl `Where` = `AND`
+
+    Bu hissə vacibdir. **Hər yeni `Where` əvvəlkilərin üzərinə `AND` kimi əlavə olunur.**
+
+    ```csharp
+    collection = collection.Where(A);
+    collection = collection.Where(B);
+    // nəticə: WHERE A AND B
+    ```
+
+    `OR` lazım olanda isə hər iki şərt **bir `Where`-in içində** `||` ilə yazılır. `searchQuery`-də etdiyimiz məhz bu idi.
+
+    | Kod | SQL |
+    |---|---|
+    | `.Where(A).Where(B)` | `WHERE A AND B` |
+    | `.Where(c => A \|\| B)` | `WHERE A OR B` |
+
+    ## Hamısını birlikdə göndərsə nə olur?
+
+    ```
+    GET /api/cars?name=car1&description=desc3&searchQuery=sport
+    ```
+
+    Hər `if` öz `Where`-ini əlavə edir və hamısı `AND` ilə birləşir:
+
+    ```sql
+    WHERE Name = 'car1'
+      AND Description = 'desc3'
+      AND (Name LIKE '%sport%' OR Description LIKE '%sport%')
+    ```
+
+    Yəni maşın **hər üç şərtə** uyğun gəlməlidir.
+
+    ## Misal
+
+    | Name | Description | `?name=car1&description=desc3` |
+    |---|---|---|
+    | car1 | desc3 | ✅ qalır |
+    | car1 | desc1 | ❌ (təsvir uyğun deyil) |
+    | car2 | desc3 | ❌ (ad uyğun deyil) |
+
+    ## `==` yoxsa `Contains`?
+
+    - `c.Name == name` **dəqiq** uyğunluq tələb edir: yalnız tam olaraq `"car1"`.
+    - `c.Name.Contains(name)` **hissəvi** uyğunluq verir: `"car1"`, `"my car1"`, `"car10"` da gəlir.
+
+    Adətən **filtr** parametrləri (`name`, `description`) `==` ilə, **axtarış** parametri (`searchQuery`) isə `Contains` ilə yazılır. Amma bu, API-ni dizayn edənin seçimidir.
+
+    **Qısaca:** `searchQuery` "harada olursa olsun bu sözü tap" deməkdir. Konkret sahələr üzrə `AND` lazımdırsa, hər sahə üçün ayrıca parametr və ayrıca `Where` yazılır.
