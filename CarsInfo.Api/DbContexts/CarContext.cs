@@ -19,6 +19,56 @@ namespace CarsInfo.Api.DbContexts
 
         public CarContext(DbContextOptions<CarContext> options) : base(options)
         {
+
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Car>()
+                .HasData(
+                new Car("Car 1")
+                {
+                    Id = 1,
+                    Name = "Car 1",
+                    Description = "Description of Car 1"
+                },
+                new Car("Car 2")
+                {
+                    Id = 2,
+                    Name = "Car 2",
+                    Description = "Description of Car 2"
+                },
+                new Car("Car 3")
+                {
+                    Id = 3,
+                    Name = "Car 3",
+                    Description = "Description of Car 3"
+                }
+            );
+            modelBuilder.Entity<PointOfInterest>().HasData(
+                new PointOfInterest("Point of Interest 1")
+                {
+                    Id = 1,
+                    CarId = 1,
+                    Name = "Point of Interest 1",
+                    Description = "Description of Point of Interest 1"
+                },
+                new PointOfInterest("Point of Interest 2")
+                {
+                    Id = 2,
+                    CarId = 1,
+                    Name = "Point of Interest 2",
+                    Description = "Description of Point of Interest 2"
+                },
+                new PointOfInterest("Point of Interest 3")
+                {
+                    Id = 3,
+                    CarId = 2,
+                    Name = "Point of Interest 3",
+                    Description = "Description of Point of Interest 3"
+                }
+            );
+            base.OnModelCreating(modelBuilder);
             
         }
 

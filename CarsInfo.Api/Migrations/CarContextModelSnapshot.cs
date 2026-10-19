@@ -35,6 +35,26 @@ namespace CarsInfo.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Cars");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Description = "Description of Car 1",
+                            Name = "Car 1"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Description = "Description of Car 2",
+                            Name = "Car 2"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Description = "Description of Car 3",
+                            Name = "Car 3"
+                        });
                 });
 
             modelBuilder.Entity("CarsInfo.Api.Entities.PointOfInterest", b =>
@@ -61,6 +81,29 @@ namespace CarsInfo.Api.Migrations
                     b.HasIndex("CarId");
 
                     b.ToTable("PointsOfInterest");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CarId = 1,
+                            Description = "Description of Point of Interest 1",
+                            Name = "Point of Interest 1"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CarId = 1,
+                            Description = "Description of Point of Interest 2",
+                            Name = "Point of Interest 2"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CarId = 2,
+                            Description = "Description of Point of Interest 3",
+                            Name = "Point of Interest 3"
+                        });
                 });
 
             modelBuilder.Entity("CarsInfo.Api.Entities.PointOfInterest", b =>
