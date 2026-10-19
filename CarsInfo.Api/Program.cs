@@ -41,9 +41,9 @@ builder.Services.AddSingleton<CarsDataStroe>();
 
 //Bunu bele de yazmaq olar
 
-builder.Services.AddDbContext<CarContext>(optionsBuilder =>
+ builder.Services.AddDbContext<CarContext>(optionsBuilder =>
 {
-    optionsBuilder.UseSqlite("Data Source=CarsInfo.db");
+    optionsBuilder.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 
 
