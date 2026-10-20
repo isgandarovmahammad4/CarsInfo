@@ -6,8 +6,8 @@ namespace CarsInfo.Api.Services
     {
         Task<IEnumerable<Car>> GetCarsAsync();
         Task<Car?> GetCarAsync(int carId, bool poi);
+        Task<bool> CarExist(int carId);
         Task<IEnumerable<PointOfInterest>> GetPointsOfInterestsAsync(int carId);
         Task<PointOfInterest?> GetPointOfInterestsAsync(int carId, int poiId);
-
     }
 }

@@ -2,6 +2,7 @@
 using CarsInfo.Api.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace CarsInfo.Api.Services
 {
@@ -25,6 +26,11 @@ namespace CarsInfo.Api.Services
         {
 
             return await _context.Cars.OrderBy(c => c.Name).ToListAsync();
+        }
+
+        public async Task<bool> CarExist(int carId)
+        {
+            return await _context.Cars.AnyAsync(c => c.Id == carId);
         }
 
         public async Task<PointOfInterest?> GetPointOfInterestsAsync(int carId, int poiId)

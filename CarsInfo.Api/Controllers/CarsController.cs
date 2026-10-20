@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using CarsInfo.Api.Models;
 using CarsInfo.Api.Services;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CarsInfo.Api.Controllers
@@ -28,14 +29,20 @@ namespace CarsInfo.Api.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult> GetCar(int id)
+        public async Task<IActionResult> GetCar(int id, bool includePoi = false)
         {
-            var car = await _carInfoRepository.GetCarAsync(id, false);
+            var car = await _carInfoRepository.GetCarAsync(id, includePoi);
             if (car == null)
             {
                 return NotFound();
             }
-            return Ok(car);
+
+            if (includePoi) 
+            {
+                return Ok(_mapper.Map<CarDto>(car));
+            }
+
+            return Ok(_mapper.Map<CarWithoutPointsOfInterestDto>(car));
 
         }
     }

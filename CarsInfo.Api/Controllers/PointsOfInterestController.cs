@@ -1,7 +1,10 @@
-﻿using CarsInfo.Api.Models;
+﻿using AutoMapper;
+using CarsInfo.Api.Models;
+using CarsInfo.Api.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
 
 namespace CarsInfo.Api.Controllers
 {
@@ -12,56 +15,47 @@ namespace CarsInfo.Api.Controllers
 
         private readonly ILogger<PointsOfInterestController> _logger;
         private readonly CarsInfo.Api.Services.IMailService _mailService;
-        private readonly CarsDataStroe _carsdataStore;
+        private readonly ICarInfoRepository _carInfoRepository;
+        private readonly IMapper _mapper;
+
         public PointsOfInterestController(ILogger<PointsOfInterestController> logger, 
             CarsInfo.Api.Services.IMailService mailService,
-            CarsDataStroe carsdataStore)
+            ICarInfoRepository carInfoRepository,
+            IMapper mapper)
 
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _mailService = mailService ?? throw new ArgumentNullException(nameof(mailService));
-            _carsdataStore = carsdataStore ?? throw new ArgumentNullException(nameof(carsdataStore));
+            _carInfoRepository = carInfoRepository ?? throw new ArgumentNullException(nameof(carInfoRepository));
+            _mapper = mapper;
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<List<PointOfInterestDto>>> GetPointsOfInterest(int carId)
+        public async Task<ActionResult<IEnumerable<List<PointOfInterestDto>>>> GetPointsOfInterest(int carId)
         {
-            throw new Exception("Sample");
-            try
+            if (!await _carInfoRepository.CarExist(carId))
             {
-                var car = _carsdataStore.Cars.FirstOrDefault(x => x.Id == carId);
-                if (car == null)
-                {
-                    return NotFound();
-                }
-                _logger.LogInformation($"Points of interest for car with id {carId} were requested.");
-                return Ok(car.PointsOfInterest.FirstOrDefault());
-
+                _logger.LogInformation($"Car with id: {carId} doesnt exist.");
+                return NotFound();
             }
-            catch (Exception exception)
-            {
 
-                _logger.LogCritical($"Exception while getting points of interest for car with id {carId}.", exception);
-                return StatusCode(500, "A problem happened while handling your request.");
-            }
+            var poi = await _carInfoRepository.GetPointsOfInterestsAsync(carId);
+            return Ok(_mapper.Map<IEnumerable<PointOfInterestDto>>(poi));
         }
 
         [HttpGet("{pointofinterestid}", Name = "GetPointOfInterest")]
-        public ActionResult<IEnumerable<PointOfInterestDto>> GetPointOfInterest(int carId, int pointofinterestid)
+        public async Task<ActionResult<IEnumerable<PointOfInterestDto>>> GetPointOfInterest(int carId, int pointofinterestid)
         {
-            var car = _carsdataStore.Cars.FirstOrDefault(x => x.Id == carId);
-            if (car == null)
+            if (!await _carInfoRepository.CarExist(carId))
             {
-                return NotFound("Car isnt exist.");
-            }
-            var pointOfInterest = car.PointsOfInterest.FirstOrDefault(x => x.Id == pointofinterestid);
-
-            if (pointOfInterest == null)
-            {
+                _logger.LogInformation("City doesnt exist.");
                 return NotFound();
             }
-            return Ok(pointOfInterest);
+            var pointsOfInterestForCar = await _carInfoRepository.GetPointsOfInterestsAsync(carId);
+
+            return Ok(_mapper.Map<IEnumerable<PointOfInterestDto>>(pointsOfInterestForCar));
         }
+
         [HttpPost]
         public ActionResult<PointOfInterestDto> CreatePointOfInterest(int carId, PointOfInterestForCreationDto pointOfInterestDto)
         {
@@ -69,12 +63,12 @@ namespace CarsInfo.Api.Controllers
             {
                 return BadRequest();
             }
-            var car = _carsdataStore.Cars.FirstOrDefault(x => x.Id == carId);
+            var car = _carInfoRepository.Cars.FirstOrDefault(x => x.Id == carId);
             if (car == null)
             {
                 return NotFound("Car isnt exist.");
             }
-            var maxPointOfInterest = _carsdataStore.Cars.SelectMany(x => x.PointsOfInterest).Max(x => x.Id);
+            var maxPointOfInterest = _carInfoRepository.Cars.SelectMany(x => x.PointsOfInterest).Max(x => x.Id);
 
             var finalPointOfInterest = new PointOfInterestDto
             {
@@ -96,7 +90,7 @@ namespace CarsInfo.Api.Controllers
         [HttpPatch]
         public ActionResult<PointOfInterestDto> PartiallyUpdatePointsOfInterest(int carId, int pointOfInterestId, JsonPatchDocument<PointOfInterestForUpdateDto> patchDocument)
         {
-            var car = _carsdataStore.Cars.FirstOrDefault(x => x.Id == carId);
+            var car = _carInfoRepository.Cars.FirstOrDefault(x => x.Id == carId);
             if (car == null)
             {
                 return NotFound("Car isnt exist.");
@@ -134,7 +128,7 @@ namespace CarsInfo.Api.Controllers
         [HttpPut("pointofinterestid")]
         public ActionResult<PointOfInterestDto> UpdatePointOfInterest(int carId, int pointOfInterestId, PointOfInterestForUpdateDto updateDto)
         {
-            var car = _carsdataStore.Cars.FirstOrDefault(c => c.Id == carId);
+            var car = _carInfoRepository.Cars.FirstOrDefault(c => c.Id == carId);
             if (car == null)
             {
                 return NotFound();
@@ -152,7 +146,7 @@ namespace CarsInfo.Api.Controllers
         [HttpDelete("{poi}")]
         public ActionResult DeletePointOfInterest(int carId, int pointOfInterestId)
         {
-            var car = _carsdataStore.Cars.FirstOrDefault(c => c.Id == carId);
+            var car = _carInfoRepository.Cars.FirstOrDefault(c => c.Id == carId);
             if (car == null)
             {
                 return NotFound();
