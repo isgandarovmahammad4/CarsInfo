@@ -315,12 +315,14 @@
 
     `Task` **"gələcəkdə bitəcək bir iş"** deməkdir, yəni bir vəd (promise).
 
-    | Tip | Mənası |
-    |---|---|
-    | `void` | sync metod, heç nə qaytarmır |
-    | `Task` | async metod, heç nə qaytarmır (async-in `void`-i) |
-    | `T` | sync metod, `T` qaytarır |
-    | `Task<T>` | async metod, bitəndə `T` qaytaracaq |
+    ┌─────────┬─────────────────────────────────────────────────┐
+    │ Tip     │ Mənası                                          │
+    ├─────────┼─────────────────────────────────────────────────┤
+    │ void    │ sync metod, heç nə qaytarmır                    │
+    │ Task    │ async metod, heç nə qaytarmır (async-in void-i) │
+    │ T       │ sync metod, T qaytarır                          │
+    │ Task<T> │ async metod, bitəndə T qaytaracaq               │
+    └─────────┴─────────────────────────────────────────────────┘
 
     ```csharp
     Task<IEnumerable<Car>> task = repo.GetCarsAsync(); // iş başladı, hələ nəticə yoxdur
@@ -450,11 +452,13 @@
 
     ## Yekun
 
-    | Vəziyyət | Seçim |
-    |---|---|
-    | Sadə API, az sorğu (kursdakı kimi) | `IEnumerable` |
-    | Çox filter/sort/paging | `IEnumerable` + parametr obyekti (pattern qorunur) |
-    | Komanda rahatlığa üstünlük verir və leak-i qəbul edir | `IQueryable` |
+    ┌───────────────────────────────────────────────────────┬──────────────────────────────────────────────────┐
+    │ Vəziyyət                                              │ Seçim                                            │
+    ├───────────────────────────────────────────────────────┼──────────────────────────────────────────────────┤
+    │ Sadə API, az sorğu (kursdakı kimi)                    │ IEnumerable                                      │
+    │ Çox filter/sort/paging                                │ IEnumerable + parametr obyekti (pattern qorunur) │
+    │ Komanda rahatlığa üstünlük verir və leak-i qəbul edir │ IQueryable                                       │
+    └───────────────────────────────────────────────────────┴──────────────────────────────────────────────────┘
 
     Videodakı əsas fikir də budur: **hər iki yanaşma real layihələrdə istifadə olunur, mütləq "düzgün" cavab yoxdur.** Kurs sadə API qurduğu üçün `IEnumerable` seçir.
 
@@ -695,14 +699,16 @@
 
     ## Müqayisə
 
-    | | Yanaşma 1 (IEnumerable + parametr) | Yanaşma 2 (IQueryable) |
-    |---|---|---|
-    | Sorğu harada qurulur | Repository-nin içində | Controller-də |
-    | Controller EF Core bilirmi | Xeyr | Bəli (`ToListAsync`) |
-    | Yeni filtr əlavə etmək | Parametr sinfinə property + repository-yə bir `if` | Controller-ə bir `Where` |
-    | Kod təkrarı | Yoxdur, məntiq bir yerdədir | Hər controller öz sorğusunu yazır |
-    | Test | Asan | Çətin |
-    | Kod həcmi | Bir az çox | Az |
+    ┌────────────────────────────┬──────────────────────────────────────────────────┬───────────────────────────────────┐
+    │                            │ Yanaşma 1 (IEnumerable + parametr)               │ Yanaşma 2 (IQueryable)            │
+    ├────────────────────────────┼──────────────────────────────────────────────────┼───────────────────────────────────┤
+    │ Sorğu harada qurulur       │ Repository-nin içində                            │ Controller-də                     │
+    │ Controller EF Core bilirmi │ Xeyr                                             │ Bəli (ToListAsync)                │
+    │ Yeni filtr əlavə etmək     │ Parametr sinfinə property + repository-yə bir if │ Controller-ə bir Where            │
+    │ Kod təkrarı                │ Yoxdur, məntiq bir yerdədir                      │ Hər controller öz sorğusunu yazır │
+    │ Test                       │ Asan                                             │ Çətin                             │
+    │ Kod həcmi                  │ Bir az çox                                       │ Az                                │
+    └────────────────────────────┴──────────────────────────────────────────────────┴───────────────────────────────────┘
 
     **Tövsiyə:** bu layihə üçün **Yanaşma 1** daha uyğundur. Kurs repository pattern öyrədir və bu yanaşma pattern-i qoruyur. Kursun sonrakı hissələrində filtr, axtarış və paging çox güman ki, məhz bu formada əlavə olunacaq.
 
@@ -742,12 +748,14 @@
 
     `||` iki şərtdən **ən azı biri** doğrudursa `true` qaytarır:
 
-    | Sol tərəf | Sağ tərəf | Nəticə |
-    |---|---|---|
-    | true | true | true |
-    | true | false | true |
-    | false | true | true |
-    | false | false | **false** |
+    ┌───────────┬───────────┬────────┐
+    │ Sol tərəf │ Sağ tərəf │ Nəticə │
+    ├───────────┼───────────┼────────┤
+    │ true      │ true      │ true   │
+    │ true      │ false     │ true   │
+    │ false     │ true      │ true   │
+    │ false     │ false     │ false  │
+    └───────────┴───────────┴────────┘
 
     Burada sol tərəf "ad uyğundur", sağ tərəf isə "təsvir uyğundur" deməkdir. Hər hansı biri uyğun gəlsə, maşın qalır.
 
@@ -773,12 +781,14 @@
 
     Bazada belə maşınlar olsun, `search = "sport"`:
 
-    | Name | Description | Ad uyğundurmu? | Təsvir uyğundurmu? | Nəticə |
-    |---|---|---|---|---|
-    | BMW sport | NULL | ✅ true | yoxlanmır, onsuz da true-dur | **qalır** |
-    | Audi A4 | comfortable sport sedan | ❌ false | ✅ true | **qalır** |
-    | Toyota Corolla | family car | ❌ false | ❌ false | çıxır |
-    | Kia Rio | NULL | ❌ false | null → false, `Contains` çağırılmır | çıxır |
+    ┌────────────────┬─────────────────────────┬────────────────┬───────────────────────────────────┬────────┐
+    │ Name           │ Description             │ Ad uyğundurmu? │ Təsvir uyğundurmu?                │ Nəticə │
+    ├────────────────┼─────────────────────────┼────────────────┼───────────────────────────────────┼────────┤
+    │ BMW sport      │ NULL                    │ [+] true       │ yoxlanmır, onsuz da true-dur      │ qalır  │
+    │ Audi A4        │ comfortable sport sedan │ [-] false      │ [+] true                          │ qalır  │
+    │ Toyota Corolla │ family car              │ [-] false      │ [-] false                         │ çıxır  │
+    │ Kia Rio        │ NULL                    │ [-] false      │ null → false, Contains çağırılmır │ çıxır  │
+    └────────────────┴─────────────────────────┴────────────────┴───────────────────────────────────┴────────┘
 
     > `||` operatorunda da short-circuit var: sol tərəf `true` olsa, sağ tərəfə baxılmır. Birinci sətirdə məhz bu baş verir.
 
@@ -863,11 +873,13 @@
 
     ## Entity ilə fərqi
 
-    | | `c` | `search` |
-    |---|---|---|
-    | Nədir | `Car` entity-si (bazadakı bir sətir) | `string` (sadə mətn) |
-    | Haradan gəlir | Bazadakı `Cars` cədvəlindən | İstifadəçinin URL-dəki parametrindən |
-    | Dəyişirmi | Hər maşın üçün fərqlidir | Bütün sorğu boyu eynidir |
+    ┌───────────────┬────────────────────────────────────┬──────────────────────────────────────┐
+    │               │ c                                  │ search                               │
+    ├───────────────┼────────────────────────────────────┼──────────────────────────────────────┤
+    │ Nədir         │ Car entity-si (bazadakı bir sətir) │ string (sadə mətn)                   │
+    │ Haradan gəlir │ Bazadakı Cars cədvəlindən          │ İstifadəçinin URL-dəki parametrindən │
+    │ Dəyişirmi     │ Hər maşın üçün fərqlidir           │ Bütün sorğu boyu eynidir             │
+    └───────────────┴────────────────────────────────────┴──────────────────────────────────────┘
 
     Lambda-da hər **maşının** (`c`) adını eyni **söz** (`search`) ilə müqayisə edirik:
 
@@ -979,10 +991,12 @@
 
     `OR` lazım olanda isə hər iki şərt **bir `Where`-in içində** `||` ilə yazılır. `searchQuery`-də etdiyimiz məhz bu idi.
 
-    | Kod | SQL |
-    |---|---|
-    | `.Where(A).Where(B)` | `WHERE A AND B` |
-    | `.Where(c => A \|\| B)` | `WHERE A OR B` |
+    ┌─────────────────────┬───────────────┐
+    │ Kod                 │ SQL           │
+    ├─────────────────────┼───────────────┤
+    │ .Where(A).Where(B)  │ WHERE A AND B │
+    │ .Where(c => A || B) │ WHERE A OR B  │
+    └─────────────────────┴───────────────┘
 
     ## Hamısını birlikdə göndərsə nə olur?
 
@@ -1002,11 +1016,13 @@
 
     ## Misal
 
-    | Name | Description | `?name=car1&description=desc3` |
-    |---|---|---|
-    | car1 | desc3 | ✅ qalır |
-    | car1 | desc1 | ❌ (təsvir uyğun deyil) |
-    | car2 | desc3 | ❌ (ad uyğun deyil) |
+    ┌──────┬─────────────┬──────────────────────────────┐
+    │ Name │ Description │ ?name=car1&description=desc3 │
+    ├──────┼─────────────┼──────────────────────────────┤
+    │ car1 │ desc3       │ [+] qalır                    │
+    │ car1 │ desc1       │ [-] (təsvir uyğun deyil)     │
+    │ car2 │ desc3       │ [-] (ad uyğun deyil)         │
+    └──────┴─────────────┴──────────────────────────────┘
 
     ## `==` yoxsa `Contains`?
 
