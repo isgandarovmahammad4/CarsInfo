@@ -1,5 +1,6 @@
 using CarsInfo.Api;
 using CarsInfo.Api.DbContexts;
+using CarsInfo.Api.Services;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -61,6 +62,7 @@ builder.Services.AddSingleton<CarsDataStroe>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<FileExtensionContentTypeProvider>();
+builder.Services.AddScoped<ICarInfoRepository, CarInfoRepository>();
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())

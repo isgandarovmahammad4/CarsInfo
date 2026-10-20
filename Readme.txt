@@ -1032,3 +1032,7 @@
     Adətən **filtr** parametrləri (`name`, `description`) `==` ilə, **axtarış** parametri (`searchQuery`) isə `Contains` ilə yazılır. Amma bu, API-ni dizayn edənin seçimidir.
 
     **Qısaca:** `searchQuery` "harada olursa olsun bu sözü tap" deməkdir. Konkret sahələr üzrə `AND` lazımdırsa, hər sahə üçün ayrıca parametr və ayrıca `Where` yazılır.
+
+32. Trasient using for Services.
+    Singleton using for  =>
+    Scoped for DbContext,Repository.
