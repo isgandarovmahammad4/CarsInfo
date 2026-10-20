@@ -1,4 +1,5 @@
-﻿using CarsInfo.Api.Models;
+﻿using AutoMapper;
+using CarsInfo.Api.Models;
 using CarsInfo.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,10 +10,12 @@ namespace CarsInfo.Api.Controllers
     public class CarsController : ControllerBase
     {
         private readonly ICarInfoRepository _carInfoRepository;
+        private readonly IMapper _mapper;
 
-        public CarsController(ICarInfoRepository carInfoRepository)
+        public CarsController(ICarInfoRepository carInfoRepository, IMapper mapper)
         {
             _carInfoRepository = carInfoRepository;
+            _mapper = mapper;
         }
 
         [HttpGet]
@@ -20,26 +23,14 @@ namespace CarsInfo.Api.Controllers
         {
             var cars = await _carInfoRepository.GetCarsAsync();
 
-            var carsWithoutPoi = new List<CarWithoutPointsOfInterestDto>();
-            foreach (var car in cars)
-            {
-                carsWithoutPoi.Add(new CarWithoutPointsOfInterestDto
-                {
-                    Id = car.Id,
-                    Name = car.Name,
-                    Description = car.Description
-                });
-
-            }
-
-            return Ok(carsWithoutPoi);
+            return Ok(_mapper.Map<IEnumerable<CarWithoutPointsOfInterestDto>>(cars));
 
         }
 
         [HttpGet("{id}")]
-        public ActionResult GetCar(int id)
+        public async Task<ActionResult> GetCar(int id)
         {
-            var car = _carInfoRepository.Cars.FirstOrDefault(x => x.Id == id);
+            var car = await _carInfoRepository.GetCarAsync(id, false);
             if (car == null)
             {
                 return NotFound();
