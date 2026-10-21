@@ -119,20 +119,21 @@ namespace CarsInfo.Api.Controllers
         }
 
         [HttpPut("pointofinterestid")]
-        public ActionResult<PointOfInterestDto> UpdatePointOfInterest(int carId, int pointOfInterestId, PointOfInterestForUpdateDto updateDto)
+        public async Task<ActionResult<PointOfInterestDto>> UpdatePointOfInterest(int carId, int pointOfInterestId, PointOfInterestForUpdateDto updateDto)
         {
-            var car = _carInfoRepository.Cars.FirstOrDefault(c => c.Id == carId);
-            if (car == null)
+            if (!await _carInfoRepository.CarExist(carId))
             {
                 return NotFound();
             }
-            var poi = car.PointsOfInterest.FirstOrDefault(p => p.Id == pointOfInterestId);
+            var poi = _carInfoRepository.GetPointOfInterestsAsync(carId,pointOfInterestId);
             if (poi == null)
             {
                 return NotFound();
             }
-            poi.Name = updateDto.Name;
-            poi.Description = updateDto.Description;
+
+            _mapper.Map(updateDto, poi);
+
+            await _carInfoRepository.SaveChangesAsync();
 
             return NoContent();
         }

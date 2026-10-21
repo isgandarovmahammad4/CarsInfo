@@ -10,6 +10,8 @@ namespace CarsInfo.Api.Profiles
         {
             CreateMap<PointOfInterest,PointOfInterestDto>();
             CreateMap<PointOfInterestForCreationDto,PointOfInterest>();
+            CreateMap<PointOfInterestForUpdateDto,PointOfInterest>();
+
         }
     }
 }
