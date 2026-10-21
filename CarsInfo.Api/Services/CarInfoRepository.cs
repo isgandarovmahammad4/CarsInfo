@@ -19,7 +19,7 @@ namespace CarsInfo.Api.Services
             {
                 return _context.Cars.Include(c => c.PointsOfInterests).Where(p => p.Id == carId).FirstOrDefaultAsync();
             }
-            return _context.Cars.FirstOrDefaultAsync(c=>c.Id == carId);
+            return _context.Cars.FirstOrDefaultAsync(c => c.Id == carId);
         }
 
         public async Task<IEnumerable<Car>> GetCarsAsync()
@@ -35,12 +35,26 @@ namespace CarsInfo.Api.Services
 
         public async Task<PointOfInterest?> GetPointOfInterestsAsync(int carId, int poiId)
         {
-            return await  _context.PointsOfInterest.Where(p=>p.CarId == carId  &&   p.Id == poiId).FirstOrDefaultAsync();
+            return await _context.PointsOfInterest.Where(p => p.CarId == carId && p.Id == poiId).FirstOrDefaultAsync();
         }
 
         public async Task<IEnumerable<PointOfInterest>> GetPointsOfInterestsAsync(int carId)
         {
             return await _context.PointsOfInterest.Where(p => p.CarId == carId).ToListAsync();
+        }
+
+        public async Task AddPointOfInterestForCityAsync(int carId, PointOfInterest pointOfInterest)
+        {
+            var car = await GetCarAsync(carId,false);
+            if (car != null) 
+            {
+                car.PointsOfInterests.Add(pointOfInterest);
+            }
+        }
+
+        public async Task<bool> SaveChangesAsync()
+        {
+            return (await _context.SaveChangesAsync() >= 0);
         }
     }
 }

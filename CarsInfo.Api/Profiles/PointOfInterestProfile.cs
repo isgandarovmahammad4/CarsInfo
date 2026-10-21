@@ -9,6 +9,7 @@ namespace CarsInfo.Api.Profiles
         public PointOfInterestProfile()
         {
             CreateMap<PointOfInterest,PointOfInterestDto>();
+            CreateMap<PointOfInterestForCreationDto,PointOfInterest>();
         }
     }
 }

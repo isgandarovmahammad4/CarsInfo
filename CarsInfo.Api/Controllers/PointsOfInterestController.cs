@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using CarsInfo.Api.Entities;
 using CarsInfo.Api.Models;
 using CarsInfo.Api.Services;
 using Microsoft.AspNetCore.Http;
@@ -18,7 +19,7 @@ namespace CarsInfo.Api.Controllers
         private readonly ICarInfoRepository _carInfoRepository;
         private readonly IMapper _mapper;
 
-        public PointsOfInterestController(ILogger<PointsOfInterestController> logger, 
+        public PointsOfInterestController(ILogger<PointsOfInterestController> logger,
             CarsInfo.Api.Services.IMailService mailService,
             ICarInfoRepository carInfoRepository,
             IMapper mapper)
@@ -57,33 +58,25 @@ namespace CarsInfo.Api.Controllers
         }
 
         [HttpPost]
-        public ActionResult<PointOfInterestDto> CreatePointOfInterest(int carId, PointOfInterestForCreationDto pointOfInterestDto)
+        public async Task<ActionResult<PointOfInterestDto>> CreatePointOfInterest(int carId, PointOfInterestForCreationDto pointOfInterestDto)
         {
-            if (!ModelState.IsValid)
+            if (!await _carInfoRepository.CarExist(carId))
             {
-                return BadRequest();
+                return NotFound();
             }
-            var car = _carInfoRepository.Cars.FirstOrDefault(x => x.Id == carId);
-            if (car == null)
-            {
-                return NotFound("Car isnt exist.");
-            }
-            var maxPointOfInterest = _carInfoRepository.Cars.SelectMany(x => x.PointsOfInterest).Max(x => x.Id);
 
-            var finalPointOfInterest = new PointOfInterestDto
-            {
-                Id = ++maxPointOfInterest,
-                Name = pointOfInterestDto.Name,
-                Description = pointOfInterestDto.Description
-            };
+            var finalPointOfInterest = _mapper.Map<PointOfInterest>(pointOfInterestDto);
 
-            car.PointsOfInterest.Add(finalPointOfInterest);
+            await _carInfoRepository.AddPointOfInterestForCityAsync(carId, finalPointOfInterest);
+            _carInfoRepository.SaveChangesAsync();
+
+            var createdPOIToReturn = _mapper.Map<PointOfInterestDto>(finalPointOfInterest);
 
             return CreatedAtRoute("GetPointOfInterest", new
             {
-                carId = car.Id,
-                pointofinterestid = finalPointOfInterest.Id
-            }, finalPointOfInterest);
+                carId = carId,
+                pointofinterestid = createdPOIToReturn.Id
+            }, createdPOIToReturn);
 
         }
 

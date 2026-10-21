@@ -9,5 +9,7 @@ namespace CarsInfo.Api.Services
         Task<bool> CarExist(int carId);
         Task<IEnumerable<PointOfInterest>> GetPointsOfInterestsAsync(int carId);
         Task<PointOfInterest?> GetPointOfInterestsAsync(int carId, int poiId);
+        Task AddPointOfInterestForCityAsync(int carId, PointOfInterest pointOfInterest);
+        Task<bool> SaveChangesAsync();
     }
 }
