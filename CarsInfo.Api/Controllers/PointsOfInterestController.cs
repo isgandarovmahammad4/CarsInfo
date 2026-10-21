@@ -136,19 +136,20 @@ namespace CarsInfo.Api.Controllers
 
 
         [HttpDelete("{poi}")]
-        public ActionResult DeletePointOfInterest(int carId, int pointOfInterestId)
+        public async Task<ActionResult> DeletePointOfInterest(int carId, int pointOfInterestId)
         {
-            var car = _carInfoRepository.Cars.FirstOrDefault(c => c.Id == carId);
-            if (car == null)
+            if (!await _carInfoRepository.CarExist(carId))
             {
                 return NotFound();
             }
-            var poi = car.PointsOfInterest.FirstOrDefault(p => p.Id == pointOfInterestId);
+            var poi = await _carInfoRepository.GetPointOfInterestsAsync(carId, pointOfInterestId);
             if (poi == null)
             {
                 return NotFound();
             }
-            car.PointsOfInterest.Remove(poi);
+
+            _carInfoRepository.DeletePointOfInterest(poi);
+
             _mailService.Send("Point of interest deleted.", $"Point of interest {poi.Name} with id {poi.Id} was deleted.");
             return NoContent();
         }
