@@ -81,26 +81,20 @@ namespace CarsInfo.Api.Controllers
         }
 
         [HttpPatch]
-        public ActionResult<PointOfInterestDto> PartiallyUpdatePointsOfInterest(int carId, int pointOfInterestId, JsonPatchDocument<PointOfInterestForUpdateDto> patchDocument)
+        public async Task<ActionResult<PointOfInterestDto>> PartiallyUpdatePointsOfInterest(int carId, int pointOfInterestId, JsonPatchDocument<PointOfInterestForUpdateDto> patchDocument)
         {
-            var car = _carInfoRepository.Cars.FirstOrDefault(x => x.Id == carId);
-            if (car == null)
+            if (!await _carInfoRepository.CarExist(carId))
             {
-                return NotFound("Car isnt exist.");
+                return NotFound();
             }
 
-            var poi = car.PointsOfInterest.FirstOrDefault(x => x.Id == pointOfInterestId);
-
+            var poi = _carInfoRepository.GetPointOfInterestsAsync(carId, pointOfInterestId);
             if (poi == null)
             {
                 return NotFound();
             }
 
-            var poiToPatch = new PointOfInterestForUpdateDto
-            {
-                Name = poi.Name,
-                Description = poi.Description
-            };
+            var poiToPatch = _mapper.Map<PointOfInterestForUpdateDto>(poi);
 
             patchDocument.ApplyTo(poiToPatch, ModelState);
 
@@ -112,8 +106,10 @@ namespace CarsInfo.Api.Controllers
             {
                 return BadRequest(ModelState);
             }
-            poi.Name = poiToPatch.Name;
-            poi.Description = poiToPatch.Description;
+
+            _mapper.Map(poiToPatch, poi);
+
+            await _carInfoRepository.SaveChangesAsync();
 
             return NoContent();
         }
@@ -125,7 +121,7 @@ namespace CarsInfo.Api.Controllers
             {
                 return NotFound();
             }
-            var poi = _carInfoRepository.GetPointOfInterestsAsync(carId,pointOfInterestId);
+            var poi = await _carInfoRepository.GetPointOfInterestsAsync(carId, pointOfInterestId);
             if (poi == null)
             {
                 return NotFound();
@@ -137,6 +133,8 @@ namespace CarsInfo.Api.Controllers
 
             return NoContent();
         }
+
+
         [HttpDelete("{poi}")]
         public ActionResult DeletePointOfInterest(int carId, int pointOfInterestId)
         {
