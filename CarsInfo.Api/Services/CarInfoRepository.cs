@@ -28,6 +28,16 @@ namespace CarsInfo.Api.Services
             return await _context.Cars.OrderBy(c => c.Name).ToListAsync();
         }
 
+        public async Task<IEnumerable<Car>> GetCarsAsync(string? name)
+        {
+            if (string.IsNullOrEmpty(name))
+            {
+                return await GetCarsAsync();
+            }
+            name = name.Trim();
+            return await _context.Cars.Where(c => c.Name == name).OrderBy(c=>c.Name).ToListAsync();
+        }
+
         public async Task<bool> CarExist(int carId)
         {
             return await _context.Cars.AnyAsync(c => c.Id == carId);

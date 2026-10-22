@@ -20,9 +20,9 @@ namespace CarsInfo.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<CarWithoutPointsOfInterestDto>>> GetCars()
+        public async Task<ActionResult<IEnumerable<CarWithoutPointsOfInterestDto>>> GetCars([FromQuery] string? name)  
         {
-            var cars = await _carInfoRepository.GetCarsAsync();
+            var cars = await _carInfoRepository.GetCarsAsync(name);
 
             return Ok(_mapper.Map<IEnumerable<CarWithoutPointsOfInterestDto>>(cars));
 

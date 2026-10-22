@@ -5,6 +5,7 @@ namespace CarsInfo.Api.Services
     public interface ICarInfoRepository
     {
         Task<IEnumerable<Car>> GetCarsAsync();
+        Task<IEnumerable<Car>> GetCarsAsync(string? name);
         Task<Car?> GetCarAsync(int carId, bool poi);
         Task<bool> CarExist(int carId);
         Task<IEnumerable<PointOfInterest>> GetPointsOfInterestsAsync(int carId);
