@@ -12,6 +12,7 @@ namespace CarsInfo.Api.Controllers
     {
         private readonly ICarInfoRepository _carInfoRepository;
         private readonly IMapper _mapper;
+        const int maxPageSize = 20;
 
         public CarsController(ICarInfoRepository carInfoRepository, IMapper mapper)
         {
@@ -20,9 +21,14 @@ namespace CarsInfo.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<CarWithoutPointsOfInterestDto>>> GetCars(string? name, string? searchQuery)
+        public async Task<ActionResult<IEnumerable<CarWithoutPointsOfInterestDto>>> GetCars(string? name, string? searchQuery, int pageNumber = 1, int pageSize = 10)
         {
-            var cars = await _carInfoRepository.GetCarsAsync(name, searchQuery);
+            if (pageSize > maxPageSize)
+            {
+                pageSize = maxPageSize;
+            }
+
+            var cars = await _carInfoRepository.GetCarsAsync(name, searchQuery, pageNumber, pageSize);
 
             return Ok(_mapper.Map<IEnumerable<CarWithoutPointsOfInterestDto>>(cars));
 

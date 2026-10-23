@@ -28,7 +28,7 @@ namespace CarsInfo.Api.Services
             return await _context.Cars.OrderBy(c => c.Name).ToListAsync();
         }
 
-        public async Task<IEnumerable<Car>> GetCarsAsync(string? name, string? searchQuery)
+        public async Task<IEnumerable<Car>> GetCarsAsync(string? name, string? searchQuery, int pageNumber, int pageSize)
         {
             if (string.IsNullOrEmpty(name) && string.IsNullOrWhiteSpace(searchQuery))
             {
@@ -49,7 +49,10 @@ namespace CarsInfo.Api.Services
                 collection = collection.Where(c => c.Name.Contains(searchQuery) || (c.Description != null && c.Description.Contains(searchQuery)));
             }
 
-            return await collection.OrderBy(c => c.Name).ToListAsync();
+            return await collection.OrderBy(c => c.Name)
+                .Skip(pageSize * (pageNumber - 1))
+                .Take(pageSize)
+                .ToListAsync();
         }
 
         public async Task<bool> CarExist(int carId)
