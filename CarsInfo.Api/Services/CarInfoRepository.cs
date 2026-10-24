@@ -90,5 +90,10 @@ namespace CarsInfo.Api.Services
         {
             _context.PointsOfInterest.Remove(pointOfInterest);
         }
+
+        public async Task<bool> CarNameMatchesCarID(string? carName, int carId)
+        {
+            return await _context.Cars.AnyAsync(c=>c.Id == carId && c.Name == carName);
+        }
     }
 }

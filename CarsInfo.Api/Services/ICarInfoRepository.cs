@@ -13,5 +13,6 @@ namespace CarsInfo.Api.Services
         Task AddPointOfInterestForCityAsync(int carId, PointOfInterest pointOfInterest);
         Task<bool> SaveChangesAsync();
         void DeletePointOfInterest(PointOfInterest pointOfInterest);
+        Task<bool> CarNameMatchesCarID(string? carName,int carId); 
     }
 }

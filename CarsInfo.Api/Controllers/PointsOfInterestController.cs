@@ -36,6 +36,14 @@ namespace CarsInfo.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<List<PointOfInterestDto>>>> GetPointsOfInterest(int carId)
         {
+            var carname = User.Claims.FirstOrDefault(c=>c.Type == "car")?.Value;
+
+            if(!await _carInfoRepository.CarNameMatchesCarID(carname,carId))
+            {
+                return Forbid();
+            }
+            
+
             if (!await _carInfoRepository.CarExist(carId))
             {
                 _logger.LogInformation($"Car with id: {carId} doesnt exist.");
