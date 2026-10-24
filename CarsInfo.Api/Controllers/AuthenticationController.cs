@@ -36,7 +36,7 @@ namespace CarsInfo.Api.Controllers
             claimsForToken.Add(new Claim("sub", user.UserId.ToString()));
             claimsForToken.Add(new Claim("given_name", user.FirstName));
             claimsForToken.Add(new Claim("family_name", user.LastName));
-            claimsForToken.Add(new Claim("car", user.Car));
+            claimsForToken.Add(new Claim("Car 1", user.Car));
 
             var jwtSecurityToken = new JwtSecurityToken(
                 _configuration["Authentication:Issuer"],
@@ -62,7 +62,7 @@ namespace CarsInfo.Api.Controllers
                 username ?? "",
                 "Kevin",
                 "Dockx",
-                "Toyota"
+                "Car 1"
             );
         }
     }

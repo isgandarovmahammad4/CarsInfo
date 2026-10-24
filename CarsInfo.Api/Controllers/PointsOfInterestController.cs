@@ -36,7 +36,7 @@ namespace CarsInfo.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<List<PointOfInterestDto>>>> GetPointsOfInterest(int carId)
         {
-            var carname = User.Claims.FirstOrDefault(c=>c.Type == "car")?.Value;
+            var carname = User.Claims.FirstOrDefault(c=>c.Type == "Car 1")?.Value;
 
             if(!await _carInfoRepository.CarNameMatchesCarID(carname,carId))
             {
