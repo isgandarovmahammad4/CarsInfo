@@ -1,12 +1,14 @@
 ﻿using AutoMapper;
 using CarsInfo.Api.Models;
 using CarsInfo.Api.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CarsInfo.Api.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/cars")]
     public class CarsController : ControllerBase
     {

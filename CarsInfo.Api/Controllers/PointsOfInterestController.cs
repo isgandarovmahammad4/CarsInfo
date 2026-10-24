@@ -2,6 +2,7 @@
 using CarsInfo.Api.Entities;
 using CarsInfo.Api.Models;
 using CarsInfo.Api.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,7 @@ using System.Threading.Tasks;
 namespace CarsInfo.Api.Controllers
 {
     [Route("api/cars/{carId}/pointsofinterest")]
+    [Authorize]
     [ApiController]
     public class PointsOfInterestController : ControllerBase
     {
