@@ -21,14 +21,16 @@ namespace CarsInfo.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<CarWithoutPointsOfInterestDto>>> GetCars(string? name, string? searchQuery, int pageNumber = 1, int pageSize = 10)
+        public async Task<ActionResult<(IEnumerable<CarWithoutPointsOfInterestDto>, PaginationMetadata)>> GetCarsAsync(string? name, string? searchQuery, int pageNumber = 1, int pageSize = 10)
         {
             if (pageSize > maxPageSize)
             {
                 pageSize = maxPageSize;
             }
 
-            var cars = await _carInfoRepository.GetCarsAsync(name, searchQuery, pageNumber, pageSize);
+            var (cars, paginationMetadata) = await _carInfoRepository.GetCarsAsync(name, searchQuery, pageNumber, pageSize);
+
+            Response.Headers.Add("X-Pagination", System.Text.Json.JsonSerializer.Serialize(paginationMetadata));
 
             return Ok(_mapper.Map<IEnumerable<CarWithoutPointsOfInterestDto>>(cars));
 
@@ -43,7 +45,7 @@ namespace CarsInfo.Api.Controllers
                 return NotFound();
             }
 
-            if (includePoi) 
+            if (includePoi)
             {
                 return Ok(_mapper.Map<CarDto>(car));
             }
