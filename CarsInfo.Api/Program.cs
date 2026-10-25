@@ -80,6 +80,16 @@ builder.Services.AddAuthentication("Bearer")
             IssuerSigningKey = new SymmetricSecurityKey(Convert.FromBase64String(builder.Configuration["Authentication:SecretForKey"]))
         };
     });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("MustBeFromCar1", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireClaim("Car 1","Car 1");
+    });
+});
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
