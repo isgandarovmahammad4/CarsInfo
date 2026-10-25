@@ -67,6 +67,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<FileExtensionContentTypeProvider>();
 builder.Services.AddScoped<ICarInfoRepository, CarInfoRepository>();
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+var bearerConfig = builder.Configuration.GetSection("Authentication:Schemes:Bearer");
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer(options =>
     {
@@ -75,8 +76,8 @@ builder.Services.AddAuthentication("Bearer")
             ValidateIssuer = true,
             ValidateAudience = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Authentication:Issuer"],
-            ValidAudience = builder.Configuration["Authentication:Audience"],
+            ValidIssuer = bearerConfig["ValidIssuer"],
+            ValidAudiences = bearerConfig.GetSection("ValidAudiences").Get<string[]>(),
             IssuerSigningKey = new SymmetricSecurityKey(Convert.FromBase64String(builder.Configuration["Authentication:SecretForKey"]))
         };
     });
