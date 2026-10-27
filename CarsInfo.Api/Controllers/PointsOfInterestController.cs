@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace CarsInfo.Api.Controllers
 {
-    [Route("api/cars/{carId}/pointsofinterest")]
+    [Route("api/v{version:apiVersion}/cars/{carId}/pointsofinterest")]
 //    [Authorize(Policy = "MustBeFromCar1")]
     [ApiController]
     [ApiVersion(2)]
