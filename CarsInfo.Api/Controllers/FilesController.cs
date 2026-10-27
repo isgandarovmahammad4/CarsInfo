@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
@@ -6,7 +7,7 @@ using Microsoft.AspNetCore.StaticFiles;
 namespace CarsInfo.Api.Controllers
 {
     [Route("api/files")]
-    [Authorize]
+//    [Authorize]
     [ApiController]
     public class FilesController : ControllerBase
     {
@@ -17,6 +18,7 @@ namespace CarsInfo.Api.Controllers
         }
 
         [HttpGet("{fileId}")]
+        [ApiVersion(0.1,Deprecated =true)]
         public ActionResult GetFile(string fileId)
         {
             var pathToFile = "Boy Artmı.pptx";

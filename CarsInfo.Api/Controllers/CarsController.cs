@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using Asp.Versioning;
+using AutoMapper;
 using CarsInfo.Api.Models;
 using CarsInfo.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -8,8 +9,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace CarsInfo.Api.Controllers
 {
     [ApiController]
-    [Authorize]
-    [Route("api/cars")]
+//    [Authorize]
+    [Route("api/v{version:apiVersion}/cars")]
+    [ApiVersion(1)]
     public class CarsController : ControllerBase
     {
         private readonly ICarInfoRepository _carInfoRepository;

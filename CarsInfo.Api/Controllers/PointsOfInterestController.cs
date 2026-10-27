@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using Asp.Versioning;
+using AutoMapper;
 using CarsInfo.Api.Entities;
 using CarsInfo.Api.Models;
 using CarsInfo.Api.Services;
@@ -11,8 +12,9 @@ using System.Threading.Tasks;
 namespace CarsInfo.Api.Controllers
 {
     [Route("api/cars/{carId}/pointsofinterest")]
-    [Authorize(Policy = "MustBeFromCar1")]
+//    [Authorize(Policy = "MustBeFromCar1")]
     [ApiController]
+    [ApiVersion(2)]
     public class PointsOfInterestController : ControllerBase
     {
 
@@ -36,12 +38,12 @@ namespace CarsInfo.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<List<PointOfInterestDto>>>> GetPointsOfInterest(int carId)
         {
-            var carname = User.Claims.FirstOrDefault(c=>c.Type == "Car 1")?.Value;
+            //var carname = User.Claims.FirstOrDefault(c=>c.Type == "Car 1")?.Value;
 
-            if(!await _carInfoRepository.CarNameMatchesCarID(carname,carId))
-            {
-                return Forbid();
-            }
+            //if(!await _carInfoRepository.CarNameMatchesCarID(carname,carId))
+            //{
+            //    return Forbid();
+            //}
             
 
             if (!await _carInfoRepository.CarExist(carId))
