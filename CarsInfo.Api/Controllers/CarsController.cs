@@ -40,7 +40,18 @@ namespace CarsInfo.Api.Controllers
 
         }
 
+        /// <summary>
+        /// Get a car by id
+        /// </summary>
+        /// <param name="id">The id of the car to get</param>
+        /// <param name="includeDetails">Whether or not to include the car details</param>
+        /// <returns>A car with or without details</returns>
+        /// <response code="200">Returns the requested car</response>
+
         [HttpGet("{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetCar(int id, bool includePoi = false)
         {
             var car = await _carInfoRepository.GetCarAsync(id, includePoi);
