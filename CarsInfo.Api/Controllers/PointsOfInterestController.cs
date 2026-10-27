@@ -11,8 +11,8 @@ using System.Threading.Tasks;
 
 namespace CarsInfo.Api.Controllers
 {
-    [Route("api/v{version:apiVersion}/cars/{carId}/pointsofinterest")]
-//    [Authorize(Policy = "MustBeFromCar1")]
+    [Route("api/cars/{carId}/pointsofinterest")]
+    [Authorize]
     [ApiController]
     [ApiVersion(2)]
     public class PointsOfInterestController : ControllerBase
@@ -36,15 +36,9 @@ namespace CarsInfo.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<List<PointOfInterestDto>>>> GetPointsOfInterest(int carId)
+        public async Task<ActionResult<IEnumerable<PointOfInterestDto>>> GetPointsOfInterest(int carId)
         {
-            //var carname = User.Claims.FirstOrDefault(c=>c.Type == "Car 1")?.Value;
-
-            //if(!await _carInfoRepository.CarNameMatchesCarID(carname,carId))
-            //{
-            //    return Forbid();
-            //}
-            
+            if (!await CanAccessCar(carId)) return Forbid();
 
             if (!await _carInfoRepository.CarExist(carId))
             {
@@ -57,21 +51,26 @@ namespace CarsInfo.Api.Controllers
         }
 
         [HttpGet("{pointofinterestid}", Name = "GetPointOfInterest")]
-        public async Task<ActionResult<IEnumerable<PointOfInterestDto>>> GetPointOfInterest(int carId, int pointofinterestid)
+        public async Task<ActionResult<PointOfInterestDto>> GetPointOfInterest(int carId, int pointofinterestid)
         {
+            if (!await CanAccessCar(carId)) return Forbid();
             if (!await _carInfoRepository.CarExist(carId))
             {
                 _logger.LogInformation("City doesnt exist.");
                 return NotFound();
             }
-            var pointsOfInterestForCar = await _carInfoRepository.GetPointsOfInterestsAsync(carId);
-
-            return Ok(_mapper.Map<IEnumerable<PointOfInterestDto>>(pointsOfInterestForCar));
+            var pointOfInterest = await _carInfoRepository.GetPointOfInterestsAsync(carId, pointofinterestid);
+            if (pointOfInterest == null)
+            {
+                return NotFound();
+            }
+            return Ok(_mapper.Map<PointOfInterestDto>(pointOfInterest));
         }
 
         [HttpPost]
         public async Task<ActionResult<PointOfInterestDto>> CreatePointOfInterest(int carId, PointOfInterestForCreationDto pointOfInterestDto)
         {
+            if (!await CanAccessCar(carId)) return Forbid();
             if (!await _carInfoRepository.CarExist(carId))
             {
                 return NotFound();
@@ -79,8 +78,8 @@ namespace CarsInfo.Api.Controllers
 
             var finalPointOfInterest = _mapper.Map<PointOfInterest>(pointOfInterestDto);
 
-            await _carInfoRepository.AddPointOfInterestForCityAsync(carId, finalPointOfInterest);
-            _carInfoRepository.SaveChangesAsync();
+            await _carInfoRepository.AddPointOfInterestForCarAsync(carId, finalPointOfInterest);
+            await _carInfoRepository.SaveChangesAsync();
 
             var createdPOIToReturn = _mapper.Map<PointOfInterestDto>(finalPointOfInterest);
 
@@ -92,15 +91,20 @@ namespace CarsInfo.Api.Controllers
 
         }
 
-        [HttpPatch]
-        public async Task<ActionResult<PointOfInterestDto>> PartiallyUpdatePointsOfInterest(int carId, int pointOfInterestId, JsonPatchDocument<PointOfInterestForUpdateDto> patchDocument)
+        [HttpPatch("{pointofinterestid}")]
+        public async Task<ActionResult<PointOfInterestDto>> PartiallyUpdatePointsOfInterest(int carId, int pointofinterestid, JsonPatchDocument<PointOfInterestForUpdateDto> patchDocument)
         {
+            if (!await CanAccessCar(carId)) return Forbid();
+            if (patchDocument == null)
+            {
+                return BadRequest();
+            }
             if (!await _carInfoRepository.CarExist(carId))
             {
                 return NotFound();
             }
 
-            var poi = _carInfoRepository.GetPointOfInterestsAsync(carId, pointOfInterestId);
+            var poi = await _carInfoRepository.GetPointOfInterestsAsync(carId, pointofinterestid);
             if (poi == null)
             {
                 return NotFound();
@@ -126,14 +130,15 @@ namespace CarsInfo.Api.Controllers
             return NoContent();
         }
 
-        [HttpPut("pointofinterestid")]
-        public async Task<ActionResult<PointOfInterestDto>> UpdatePointOfInterest(int carId, int pointOfInterestId, PointOfInterestForUpdateDto updateDto)
+        [HttpPut("{pointofinterestid}")]
+        public async Task<ActionResult<PointOfInterestDto>> UpdatePointOfInterest(int carId, int pointofinterestid, PointOfInterestForUpdateDto updateDto)
         {
+            if (!await CanAccessCar(carId)) return Forbid();
             if (!await _carInfoRepository.CarExist(carId))
             {
                 return NotFound();
             }
-            var poi = await _carInfoRepository.GetPointOfInterestsAsync(carId, pointOfInterestId);
+            var poi = await _carInfoRepository.GetPointOfInterestsAsync(carId, pointofinterestid);
             if (poi == null)
             {
                 return NotFound();
@@ -147,23 +152,31 @@ namespace CarsInfo.Api.Controllers
         }
 
 
-        [HttpDelete("{poi}")]
-        public async Task<ActionResult> DeletePointOfInterest(int carId, int pointOfInterestId)
+        [HttpDelete("{pointofinterestid}")]
+        public async Task<ActionResult> DeletePointOfInterest(int carId, int pointofinterestid)
         {
+            if (!await CanAccessCar(carId)) return Forbid();
             if (!await _carInfoRepository.CarExist(carId))
             {
                 return NotFound();
             }
-            var poi = await _carInfoRepository.GetPointOfInterestsAsync(carId, pointOfInterestId);
+            var poi = await _carInfoRepository.GetPointOfInterestsAsync(carId, pointofinterestid);
             if (poi == null)
             {
                 return NotFound();
             }
 
             _carInfoRepository.DeletePointOfInterest(poi);
+            await _carInfoRepository.SaveChangesAsync();
 
             _mailService.Send("Point of interest deleted.", $"Point of interest {poi.Name} with id {poi.Id} was deleted.");
             return NoContent();
+        }
+
+        private Task<bool> CanAccessCar(int carId)
+        {
+            var carName = User.FindFirst("Car 1")?.Value;
+            return _carInfoRepository.CarNameMatchesCarID(carName, carId);
         }
     }
 }

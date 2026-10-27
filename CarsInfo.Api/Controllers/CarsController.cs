@@ -9,14 +9,14 @@ using Microsoft.AspNetCore.Mvc;
 namespace CarsInfo.Api.Controllers
 {
     [ApiController]
-//    [Authorize]
-    [Route("api/v{version:apiVersion}/cars")]
+    [Authorize]
+    [Route("api/cars")]
     [ApiVersion(1)]
     public class CarsController : ControllerBase
     {
         private readonly ICarInfoRepository _carInfoRepository;
         private readonly IMapper _mapper;
-        const int maxPageSize = 20;
+        private const int MaxPageSize = 20;
 
         public CarsController(ICarInfoRepository carInfoRepository, IMapper mapper)
         {
@@ -27,14 +27,12 @@ namespace CarsInfo.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<(IEnumerable<CarWithoutPointsOfInterestDto>, PaginationMetadata)>> GetCarsAsync(string? name, string? searchQuery, int pageNumber = 1, int pageSize = 10)
         {
-            if (pageSize > maxPageSize)
-            {
-                pageSize = maxPageSize;
-            }
+            pageNumber = Math.Max(1, pageNumber);
+            pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
 
             var (cars, paginationMetadata) = await _carInfoRepository.GetCarsAsync(name, searchQuery, pageNumber, pageSize);
 
-            Response.Headers.Add("X-Pagination", System.Text.Json.JsonSerializer.Serialize(paginationMetadata));
+            Response.Headers["X-Pagination"] = System.Text.Json.JsonSerializer.Serialize(paginationMetadata);
 
             return Ok(_mapper.Map<IEnumerable<CarWithoutPointsOfInterestDto>>(cars));
 

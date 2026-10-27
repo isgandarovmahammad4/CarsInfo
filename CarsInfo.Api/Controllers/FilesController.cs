@@ -43,7 +43,7 @@ namespace CarsInfo.Api.Controllers
             {
                 return BadRequest("No file uploaded.");
             }
-            var filepath = Path.Combine(Directory.GetCurrentDirectory(), $"Uploaded_File_{Guid.NewGuid}.pdf");
+            var filepath = Path.Combine(Directory.GetCurrentDirectory(), $"Uploaded_File_{Guid.NewGuid()}.pdf");
 
             using (var stream = new FileStream(filepath, FileMode.Create))
             {

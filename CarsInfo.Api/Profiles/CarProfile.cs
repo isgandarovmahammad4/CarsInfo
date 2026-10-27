@@ -8,7 +8,8 @@ namespace CarsInfo.Api.Profiles
         public CarProfile() 
         {
             CreateMap<Car, CarWithoutPointsOfInterestDto>();
-            CreateMap<Car, CarDto>();
+            CreateMap<Car, CarDto>()
+                .ForMember(d => d.PointsOfInterest, o => o.MapFrom(s => s.PointsOfInterests));
         }
     }
 }

@@ -72,7 +72,7 @@ namespace CarsInfo.Api.Services
             return await _context.PointsOfInterest.Where(p => p.CarId == carId).ToListAsync();
         }
 
-        public async Task AddPointOfInterestForCityAsync(int carId, PointOfInterest pointOfInterest)
+        public async Task AddPointOfInterestForCarAsync(int carId, PointOfInterest pointOfInterest)
         {
             var car = await GetCarAsync(carId,false);
             if (car != null) 
