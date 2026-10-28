@@ -1,4 +1,6 @@
-﻿namespace CarsInfo.Api.Services
+﻿using CarsInfo.Api.Services.Abstraction;
+
+namespace CarsInfo.Api.Services
 {
     public class LocalMailService : IMailService
     {

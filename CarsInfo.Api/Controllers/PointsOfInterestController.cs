@@ -2,7 +2,7 @@
 using AutoMapper;
 using CarsInfo.Api.Entities;
 using CarsInfo.Api.Models;
-using CarsInfo.Api.Services;
+using CarsInfo.Api.Services.Abstraction;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
@@ -19,12 +19,12 @@ namespace CarsInfo.Api.Controllers
     {
 
         private readonly ILogger<PointsOfInterestController> _logger;
-        private readonly CarsInfo.Api.Services.IMailService _mailService;
+        private readonly IMailService _mailService;
         private readonly ICarInfoRepository _carInfoRepository;
         private readonly IMapper _mapper;
 
         public PointsOfInterestController(ILogger<PointsOfInterestController> logger,
-            CarsInfo.Api.Services.IMailService mailService,
+            IMailService mailService,
             ICarInfoRepository carInfoRepository,
             IMapper mapper)
 

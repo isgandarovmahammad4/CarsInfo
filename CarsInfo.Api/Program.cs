@@ -3,6 +3,7 @@ using Asp.Versioning.ApiExplorer;
 using CarsInfo.Api;
 using CarsInfo.Api.DbContexts;
 using CarsInfo.Api.Services;
+using CarsInfo.Api.Services.Abstraction;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
@@ -34,9 +35,9 @@ builder.Services.AddControllers(options =>
 
 builder.Services.AddProblemDetails();
 #if DEBUG
-builder.Services.AddTransient<CarsInfo.Api.Services.IMailService, CarsInfo.Api.Services.LocalMailService>();
+builder.Services.AddTransient<IMailService, CarsInfo.Api.Services.LocalMailService>();
 #else
-builder.Services.AddTransient<CarsInfo.Api.Services.IMailService, CarsInfo.Api.Services.CloudMailService>();
+builder.Services.AddTransient<IMailService, CarsInfo.Api.Services.CloudMailService>();
 #endif
 //we can now path dbcontext options and we can say we want to use sqlite on it. We need to provide a connection string. 
 //We can do that by using the configuration object that is available in the program.cs file. We can use the configuration object to get the connection string from the appsettings.json file. 

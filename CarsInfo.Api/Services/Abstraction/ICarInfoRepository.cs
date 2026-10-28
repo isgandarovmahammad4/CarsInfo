@@ -1,6 +1,6 @@
 ﻿using CarsInfo.Api.Entities;
 
-namespace CarsInfo.Api.Services
+namespace CarsInfo.Api.Services.Abstraction
 {
     public interface ICarInfoRepository
     {

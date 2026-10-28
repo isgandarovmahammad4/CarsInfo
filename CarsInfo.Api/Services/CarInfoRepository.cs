@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using CarsInfo.Api.Services.Abstraction;
 
 namespace CarsInfo.Api.Services
 {

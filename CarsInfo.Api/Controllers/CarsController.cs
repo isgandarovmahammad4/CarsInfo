@@ -2,6 +2,7 @@
 using AutoMapper;
 using CarsInfo.Api.Models;
 using CarsInfo.Api.Services;
+using CarsInfo.Api.Services.Abstraction;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
