@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Asp.Versioning.ApiExplorer;
 using CarsInfo.Api;
 using CarsInfo.Api.DbContexts;
 using CarsInfo.Api.Services;
@@ -106,8 +107,23 @@ builder.Services.AddApiVersioning(setupAction =>
     setupAction.SubstituteApiVersionInUrl = true;
 });
 
+var apiVersionDescriptionProvider = builder.Services.BuildServiceProvider()
+    .GetRequiredService<IApiVersionDescriptionProvider>();
+
 builder.Services.AddSwaggerGen(setupAction =>
 {
+    foreach (var description in apiVersionDescriptionProvider.ApiVersionDescriptions)
+    {
+        setupAction.SwaggerDoc(
+            description.GroupName,
+            new OpenApiInfo
+            {
+                Title = "CarsInfo API",
+                Version = description.ApiVersion.ToString(),
+                Description = "Through this API you can access cars and their points of interest."
+            });
+    }
+
     var xmlCommentsFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlCommentsFullPath = Path.Combine(AppContext.BaseDirectory, xmlCommentsFile);
     setupAction.IncludeXmlComments(xmlCommentsFullPath);

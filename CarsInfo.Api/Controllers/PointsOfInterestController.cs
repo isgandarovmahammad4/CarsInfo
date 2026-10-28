@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace CarsInfo.Api.Controllers
 {
     [Route("api/cars/{carId}/pointsofinterest")]
-    [Authorize]
+   // [Authorize]
     [ApiController]
     [ApiVersion(2)]
     public class PointsOfInterestController : ControllerBase
