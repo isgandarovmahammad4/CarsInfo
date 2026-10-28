@@ -3,6 +3,7 @@ using Asp.Versioning.ApiExplorer;
 using CarsInfo.Api;
 using CarsInfo.Api.DbContexts;
 using CarsInfo.Api.Services;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -148,16 +149,21 @@ builder.Services.AddSwaggerGen(setupAction =>
     });
 });
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
+
     var app = builder.Build();
 
     if (!app.Environment.IsDevelopment())
     {
         app.UseExceptionHandler();
     }
+    app.UseForwardedHeaders();
 
-
-    // Configure the HTTP request pipeline. Theese are also middlewares that will be executed in the order they are added to the pipeline.
-    if (app.Environment.IsDevelopment())
+// Configure the HTTP request pipeline. Theese are also middlewares that will be executed in the order they are added to the pipeline.
+if (app.Environment.IsDevelopment())
     {
         app.UseSwagger();
         app.UseSwaggerUI(setupAction =>
