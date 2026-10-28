@@ -1,0 +1,41 @@
+# For more info on HTTP files go to https://aka.ms/vs/httpfile
+@schema=https
+@hostname=localhost
+@port=7098
+
+GET {{schema}}://{{hostname}}:{{port}}/api/v1/cars 
+
+### 
+GET {{schema}}://{{hostname}}:{{port}}/api/v1/cars 
+Accept: application/xml
+
+###
+POST {{schema}}://{{hostname}}:{{port}}/api/v2/cars/2/pointsofinterest
+Accept: application/json
+Content-Type: application/json
+
+{
+  "name": "Test Point of Interest",
+  "description": "This is a test point of interest."
+}
+
+###
+@poiid = {{createpoi.response.body.id}}
+
+GET {{schema}}://{{hostname}}:{{port}}/api/v2/cars/2/pointsofinterest/{{poiid}}
+Accept: application/json
+
+###
+
+// get a token 
+POST {{schema}}://{{hostname}}:{{port}}/api/authentication/authenticate
+Content-Type: application/json
+{
+  "username": "testuser",
+  "password": "testpassword"
+}
+
+###
+
+GET {{schema}}://{{hostname}}:{{port}}/api/v1/cars 
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZ2l2ZW5fbmFtZSI6IktldmluIiwiZmFtaWx5X25hbWUiOiJEb2NreCIsIkNhciAxIjoiQ2FyIDEiLCJuYmYiOjE3OTMxOTE0OTAsImV4cCI6MTc5MzE5NTA5MCwiaXNzIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6NzA5OCIsImF1ZCI6ImNhcnNpbmZvYXBpIn0.BpqJ3jytnbySW2AKBD4s55Gs_x6XmIlNBbJif9GANdM

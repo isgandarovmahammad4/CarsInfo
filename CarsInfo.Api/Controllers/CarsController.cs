@@ -10,7 +10,7 @@ namespace CarsInfo.Api.Controllers
 {
     [ApiController]
     [Authorize]
-    [Route("api/cars")]
+    [Route("api/v{version:apiVersion}/Cars")]
     [ApiVersion(1)]
     public class CarsController : ControllerBase
     {
@@ -46,13 +46,13 @@ namespace CarsInfo.Api.Controllers
         /// <returns>A car with or without details</returns>
         /// <response code="200">Returns the requested car</response>
 
-        [HttpGet("{id}")]
+        [HttpGet("{carId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetCar(int id, bool includePoi = false)
+        public async Task<IActionResult> GetCar(int carId, bool includePoi = false)
         {
-            var car = await _carInfoRepository.GetCarAsync(id, includePoi);
+            var car = await _carInfoRepository.GetCarAsync(carId, includePoi);
             if (car == null)
             {
                 return NotFound();

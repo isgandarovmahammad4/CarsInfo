@@ -1036,3 +1036,284 @@
 32. Trasient using for Services.
     Singleton using for  =>
     Scoped for DbContext,Repository.
+
+33. Swagger "Failed to load API definition" (404) və HttpRepl ilə 401 Unauthorized problemi.
+
+    Burada 3 ayrı problem olub. Kodda yalnız birincisi üçün dəyişiklik lazım oldu.
+
+    # A. Swagger: "Failed to load API definition" (404 /swagger/2.0/swagger.json)
+
+    ## Sadə dillə nə baş verdi?
+
+    Swagger iki hissədən ibarətdir:
+    - **SwaggerGen** — API-ni oxuyur və JSON sənəd **yaradır** (məs: `/swagger/1.0/swagger.json`). Bu, "mətbəx"dir.
+    - **SwaggerUI** — həmin JSON-u **oxuyub** gözəl səhifə kimi göstərir. Bu, "ofisiant"dır.
+
+    Bizdə ofisiant (UI) mətbəxdən (Gen) olmayan yeməyi istəyirdi:
+
+    ```csharp
+    app.UseSwaggerUI(setupAction =>
+    {
+        foreach (var description in app.DescribeApiVersions())
+        {
+            // UI hər versiya üçün siyahıya bir sətir əlavə edir: 0.1, 1.0, 2.0
+            setupAction.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", ...);
+        }
+    });
+    ```
+
+    Controller-lərdə 3 versiya var: `[ApiVersion(0.1)]`, `[ApiVersion(1)]`, `[ApiVersion(2)]`.
+    Ona görə UI `/swagger/2.0/swagger.json` faylını istəyirdi.
+
+    Amma `AddSwaggerGen`-də heç bir `SwaggerDoc(...)` yazılmamışdı. Belə olanda Swashbuckle
+    yalnız **bir** default sənəd yaradır və onun adı `v1`-dir. Yəni `2.0` adlı sənəd **yox idi** → **404**.
+
+    ┌──────────────────────┬──────────────────────────────────────┐
+    │ UI nə istəyirdi      │ Gen nə yaradırdı                     │
+    ├──────────────────────┼──────────────────────────────────────┤
+    │ /swagger/0.1/...json │ yox                                  │
+    │ /swagger/1.0/...json │ yox                                  │
+    │ /swagger/2.0/...json │ yox                                  │
+    │ -                    │ /swagger/v1/swagger.json (default)   │
+    └──────────────────────┴──────────────────────────────────────┘
+
+    ## Həll: hər versiya üçün ayrıca sənəd yaratmaq (Program.cs)
+
+    ```csharp
+    using Asp.Versioning.ApiExplorer;   // əlavə olundu
+
+    // Versiyaların siyahısını almaq üçün provider-i götürürük
+    var apiVersionDescriptionProvider = builder.Services.BuildServiceProvider()
+        .GetRequiredService<IApiVersionDescriptionProvider>();
+
+    builder.Services.AddSwaggerGen(setupAction =>
+    {
+        // Hər versiya (0.1, 1.0, 2.0) üçün bir Swagger sənədi
+        foreach (var description in apiVersionDescriptionProvider.ApiVersionDescriptions)
+        {
+            setupAction.SwaggerDoc(
+                description.GroupName,          // sənədin adı = UI-ın istədiyi ad
+                new OpenApiInfo
+                {
+                    Title = "CarsInfo API",
+                    Version = description.ApiVersion.ToString(),
+                    Description = "Through this API you can access cars and their points of interest."
+                });
+        }
+
+        // ... XML comments və security hissəsi olduğu kimi qalır
+    });
+    ```
+
+    **Əsas qayda:** UI-da `SwaggerEndpoint`-də yazılan ad ilə Gen-də `SwaggerDoc`-da yazılan ad **eyni olmalıdır**.
+    İkisi də `description.GroupName`-dən gəldiyi üçün indi həmişə uyğun gəlir.
+
+    Swashbuckle hər endpoint-i öz versiyasının sənədinə qoyur (endpoint-in `GroupName`-i = sənədin adı).
+    Ona görə 1.0 sənədində yalnız `CarsController`, 2.0 sənədində yalnız `PointsOfInterestController` görünür.
+
+    Qeyd: `BuildServiceProvider()` burada ASP0000 xəbərdarlığı verə bilər. Öyrənmə layihəsi üçün problem deyil.
+    Daha "təmiz" yol `IConfigureOptions<SwaggerGenOptions>` sinfi yazmaqdır.
+
+    # B. HttpRepl: GET /api/cars → 401 Unauthorized
+
+    ## Niyə?
+
+    `CarsController`-in üstündə `[Authorize]` var. Yəni token (JWT) olmadan bu controller-ə girmək olmaz.
+
+    Swagger-də "Authorize" düyməsinə token yazmaq **yalnız Swagger səhifəsinə** aiddir.
+    HttpRepl ayrıca proqramdır, o token-i bilmir. Ona özün `Authorization` header-i verməlisən.
+
+    Server cavabındakı bu sətir də bunu deyir:
+
+    ```
+    WWW-Authenticate: Bearer
+    ```
+
+    Yəni: "Mənə Bearer token lazımdır, sən göndərməmisən."
+
+    ## İkinci kiçik səbəb: səhv versiyanın sənədi
+
+    HttpRepl-i **2.0** sənədinə qoşmuşduq. 2.0-da yalnız `pointsofinterest` var. `/api/cars` isə **1.0**-dadır.
+    Ona görə `ls` əmri `/api/cars []` göstərirdi — `[]` "bu sənəddə bu yol üçün HTTP metodu yoxdur" deməkdir.
+    1.0-a qoşulanda `/api/cars [GET]` göründü.
+
+    Bəs niyə `get` yenə də serverə getdi? Çünki HttpRepl sənəddə olmasa belə sorğunu göndərir.
+    URL-də versiya olmadığı üçün server `AssumeDefaultVersionWhenUnspecified = true` sayəsində 1.0 götürdü.
+
+    ## Həll (kod dəyişikliyi yoxdur)
+
+    HttpRepl-in **içində** (prompt `https://localhost:7098/...>` olanda):
+
+    ```
+    connect https://localhost:7098 --openapi https://localhost:7098/swagger/1.0/swagger.json
+    set header content-type application/json
+    post /api/authentication/authenticate -c "{\"username\":\"kevin\",\"password\":\"x\"}"
+    set header Authorization "Bearer TOKEN_BURAYA"
+    cd api/cars
+    get
+    ```
+
+    Nəticə: `HTTP/1.1 200 OK` və 3 maşın.
+
+    Niyə adi `connect https://localhost:7098` "Unable to find an OpenAPI description" dedi?
+    Çünki HttpRepl standart yolları yoxlayır (məs: `/swagger/v1/swagger.json`). Bizim sənədlər isə
+    `1.0`, `2.0`, `0.1` adlanır. Ona görə `--openapi` ilə yolu özümüz göstəririk.
+
+    # C. HttpRepl çökdü və əmrlər Windows-a getdi
+
+    ## 3 səhv bir yerdə
+
+    1. **Token `<` `>` içində yazıldı.** Nümunədəki `<token>` "token-i bura qoy" deməkdir, mötərizələr token-in hissəsi deyil.
+       Düzgün: `"Bearer eyJhbGci..."`, səhv: `"Bearer <eyJhbGci...>"`.
+
+    2. **HttpRepl çökdü** (`ArgumentOutOfRangeException ... Parameter 'top'`). Bu, HttpRepl-in öz bug-udur:
+       çox uzun sətir pəncərənin aşağı kənarından keçəndə kursoru pəncərədən kənara aparmağa çalışır və çökür.
+       Token çox uzun olduğu üçün bu baş verdi.
+
+    3. **Çökəndən sonra əmrlər cmd-yə yazıldı.** HttpRepl bağlandı, prompt `C:\Users\...>` oldu.
+       Bundan sonra `connect`, `run`, `set header`, `cd api/cars` Windows-a getdi:
+       - `connect`, `run` → Windows belə əmr tanımır.
+       - `set` → cmd-də environment variable yaradır, header yox.
+       - `cd api/cars` → cmd qovluq axtarır.
+
+    ## Hansı prompt-dayam?
+
+    ┌───────────────────────────────┬──────────────────┬──────────────────────────────────┐
+    │ Prompt                        │ Harada           │ Nə yazmaq olar                   │
+    ├───────────────────────────────┼──────────────────┼──────────────────────────────────┤
+    │ C:\Users\...>                 │ Windows cmd      │ httprepl (əvvəlcə bunu işə sal)  │
+    │ (Disconnected)>               │ HttpRepl         │ connect, run                     │
+    │ https://localhost:7098/...>   │ HttpRepl         │ set header, cd, ls, get, post    │
+    └───────────────────────────────┴──────────────────┴──────────────────────────────────┘
+
+    ## Həll: uzun sətri script faylına yazmaq
+
+    Bir mətn faylı yarat (məs: `auth.txt`):
+
+    ```
+    connect https://localhost:7098 --openapi https://localhost:7098/swagger/1.0/swagger.json
+    set header Authorization "Bearer TOKEN_BURAYA"
+    cd api/cars
+    ```
+
+    Sonra:
+
+    ```
+    C:\...> httprepl
+    (Disconnected)> run "C:\yol\auth.txt"
+    https://localhost:7098/api/cars> get
+    ```
+
+    `run` faylı sətir-sətir icra edir, uzun sətri yapışdırmağa ehtiyac qalmır, HttpRepl çökmür.
+    Alternativ: əvvəl `clear` yaz, pəncərəni böyüt, sonra yapışdır.
+
+    **Yadda saxla:** token 1 saat etibarlıdır (`DateTime.UtcNow.AddHours(1)`). Vaxtı bitəndə yenə 401 alacaqsan —
+    `post /api/authentication/authenticate` ilə yeni token al və faylda dəyiş.
+
+    **Qısaca:**
+    - 404 → Swagger UI olmayan sənədi istəyirdi → hər versiya üçün `SwaggerDoc` əlavə etdik.
+    - 401 → HttpRepl token göndərmirdi → `set header Authorization "Bearer ..."`.
+    - Çökmə → uzun sətir HttpRepl bug-u → script faylı + `run`.
+
+34. HttpRepl: `run` script faylı və `get -h Accept:application/xml` nə edir?
+
+    Bu, HttpRepl-in içində ard-arda yazılan 2 əmrdir:
+
+    ```
+    run "C:\yol\auth.txt"
+    get -h Accept:application/xml
+    ```
+
+    # A. `run "...auth.txt"`
+
+    `run` mətn faylını oxuyur və **hər sətri sanki sən özün yazmısan kimi** icra edir.
+    Faylda 3 sətir var:
+
+    ┌───────────────────────────────────────────────┬────────────────────────────────────────────────────────┐
+    │ Fayldakı sətir                                │ Nə edir                                                │
+    ├───────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
+    │ connect https://localhost:7098 --openapi ...  │ HttpRepl-i API-yə qoşur, 1.0 Swagger sənədini yükləyir │
+    │ /swagger/1.0/swagger.json                     │ → `ls` və `cd` endpoint-ləri tanıyır.                  │
+    ├───────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
+    │ set header Authorization "Bearer eyJ..."      │ JWT token-i bundan sonrakı **hər** sorğuya əlavə edir  │
+    │                                               │ → `[Authorize]` olan controller-lər içəri buraxır.     │
+    ├───────────────────────────────────────────────┼────────────────────────────────────────────────────────┤
+    │ cd api/cars                                   │ `/api/cars`-a keçir → sadəcə `get` yazanda             │
+    │                                               │ `GET https://localhost:7098/api/cars` getsin.          │
+    └───────────────────────────────────────────────┴────────────────────────────────────────────────────────┘
+
+    Yəni bu 3 əmri əllə yazmaqla eynidir. Fərq: uzun token sətrini yapışdırmırsan, HttpRepl çökmür (bax: 33-C).
+
+    # B. `get -h Accept:application/xml`
+
+    - `get` → olduğun yola (`/api/cars`) **GET** sorğusu göndərir. `Authorization` header-i A-dan avtomatik gedir.
+    - `-h` (`--header`-in qısası) → header-i **yalnız bu bir sorğu üçün** əlavə edir.
+      (`set header` isə **bütün** sorğular üçündür.)
+    - `Accept:application/xml` → serverə deyir: "Cavabı **JSON yox, XML** kimi göndər."
+
+    ## Content negotiation (məzmun razılaşması)
+
+    Client `Accept` header-i ilə **hansı formatı istədiyini** deyir, server isə uyğun **formatter** seçir.
+
+    Bizim API XML qaytara bilir, çünki `Program.cs`-də bu var:
+
+    ```csharp
+    builder.Services.AddControllers(options =>
+    {
+        options.ReturnHttpNotAcceptable = false;
+    })
+    .AddXmlDataContractSerializerFormatters();   // XML formatter əlavə edir
+    ```
+
+    `AddXmlDataContractSerializerFormatters()` olmasa, API yalnız JSON qaytara bilərdi.
+
+    Gözlənilən nəticə:
+
+    ```
+    HTTP/1.1 200 OK
+    Content-Type: application/xml; charset=utf-8
+
+    <ArrayOfCarWithoutPointsOfInterestDto ...>
+      ...
+    </ArrayOfCarWithoutPointsOfInterestDto>
+    ```
+
+    ## Dəstəklənməyən format istəsən nə olur?
+
+    Məsələn `get -h Accept:text/csv`. Cavab `ReturnHttpNotAcceptable`-dan asılıdır:
+
+    ┌─────────────────────────┬─────────────────────────────────────────────────┐
+    │ ReturnHttpNotAcceptable │ Accept:text/csv göndərəndə                      │
+    ├─────────────────────────┼─────────────────────────────────────────────────┤
+    │ false (bizdə belədir)   │ Xəta yox, default olaraq JSON qaytarır          │
+    │ true                    │ 406 Not Acceptable ("bu formatı verə bilmirəm") │
+    └─────────────────────────┴─────────────────────────────────────────────────┘
+
+    # C. Bonus: "The token expired" (401)
+
+    Bir saatdan sonra eyni əmr belə cavab verdi:
+
+    ```
+    HTTP/1.1 401 Unauthorized
+    WWW-Authenticate: Bearer error="invalid_token", error_description="The token expired at '10/28/2026 09:48:45'"
+    ```
+
+    Səbəb: `AuthenticationController`-də token **1 saatlıq** yaradılır:
+
+    ```csharp
+    DateTime.UtcNow.AddHours(1)   // token-in bitmə vaxtı
+    ```
+
+    Vaxtı bitmiş token = token yoxdur. Yəni API düzgün işləyir, sadəcə yeni token lazımdır:
+    1. `post /api/authentication/authenticate -c "{\"username\":\"kevin\",\"password\":\"x\"}"` → yeni token al.
+    2. `auth.txt`-də 2-ci sətirdəki köhnə token-i yenisi ilə əvəz et.
+    3. Yenə `run "C:\yol\auth.txt"`.
+
+    Qeyd: "No connection could be made because the target machine actively refused it" isə fərqli xətadır —
+    bu, API-nin həmin an **işləmədiyini** göstərir (məs: restart olunurdu). Token ilə əlaqəsi yoxdur.
+
+    **Qısaca:**
+    - `run` → fayldakı əmrləri bir-bir icra edir (qoşul + token + cd).
+    - `get -h Accept:application/xml` → GET sorğusu, cavabı XML formatında istəyir.
+    - `-h` bir sorğu üçün, `set header` bütün sorğular üçün.
+    - Token 1 saatdan sonra bitir → 401 → yeni token al.

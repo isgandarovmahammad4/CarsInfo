@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.StaticFiles;
 namespace CarsInfo.Api.Controllers
 {
     [Route("api/v{version:apiVersion}/files")]
-//    [Authorize]
+    [Authorize]
     [ApiController]
     public class FilesController : ControllerBase
     {

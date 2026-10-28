@@ -1,6 +1,12 @@
-@CarsInfo.Api_HostAddress = http://localhost:5180
+@CarsInfo.Api_HostAddress = https://localhost:7098
 
 GET {{CarsInfo.Api_HostAddress}}/weatherforecast/
 Accept: application/json
+
+###
+
+@name=string
+@searchQuery=string
+GET {{CarsInfo.Api_HostAddress}}/api/v{version:apiVersion}/Cars?name={{name}}&searchQuery={{searchQuery}}
 
 ###

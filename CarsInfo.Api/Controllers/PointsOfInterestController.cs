@@ -11,8 +11,8 @@ using System.Threading.Tasks;
 
 namespace CarsInfo.Api.Controllers
 {
-    [Route("api/cars/{carId}/pointsofinterest")]
-   // [Authorize]
+    [Route("api/v{version:apiVersion}/cars/{carId}/pointsofinterest")]
+    [Authorize]
     [ApiController]
     [ApiVersion(2)]
     public class PointsOfInterestController : ControllerBase
@@ -70,7 +70,7 @@ namespace CarsInfo.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<PointOfInterestDto>> CreatePointOfInterest(int carId, PointOfInterestForCreationDto pointOfInterestDto)
         {
-            if (!await CanAccessCar(carId)) return Forbid();
+            //if (!await CanAccessCar(carId)) return Forbid();
             if (!await _carInfoRepository.CarExist(carId))
             {
                 return NotFound();
