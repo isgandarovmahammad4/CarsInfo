@@ -40,10 +40,11 @@ namespace CarsInfo.Api.Controllers
         /// <summary>
         /// Get a car by id
         /// </summary>
-        /// <param name="id">The id of the car to get</param>
-        /// <param name="includeDetails">Whether or not to include the car details</param>
-        /// <returns>A car with or without details</returns>
+        /// <param name="carId">The id of the car to get</param>
+        /// <param name="includePoi">Whether or not to include the car's points of interest</param>
+        /// <returns>A car with or without its points of interest</returns>
         /// <response code="200">Returns the requested car</response>
+        /// <response code="404">No car exists with the given id</response>
 
         [HttpGet("{carId}")]
         [ProducesResponseType(StatusCodes.Status200OK)]

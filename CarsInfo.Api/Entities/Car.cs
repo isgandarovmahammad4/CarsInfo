@@ -13,7 +13,7 @@ namespace CarsInfo.Api.Entities
         [MaxLength(50)]
         public string Name { get; set; }
         [MaxLength(200)]
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
         public ICollection<PointOfInterest> PointsOfInterests { get; set; } = new List<PointOfInterest>();
 
         public Car(string name)

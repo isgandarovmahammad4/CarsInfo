@@ -4,13 +4,16 @@ using CarsInfo.Api;
 using CarsInfo.Api.DbContexts;
 using CarsInfo.Api.Services;
 using CarsInfo.Api.Services.Abstraction;
+using CarsInfo.Api.Swagger;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Reflection;
 using System.Security.Cryptography;
 
@@ -73,6 +76,13 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSingleton<FileExtensionContentTypeProvider>();
 builder.Services.AddScoped<ICarInfoRepository, CarInfoRepository>();
 var bearerConfig = builder.Configuration.GetSection("Authentication:Schemes:Bearer");
+var secretForKey = builder.Configuration["Authentication:SecretForKey"];
+if (string.IsNullOrWhiteSpace(secretForKey))
+{
+    throw new InvalidOperationException(
+        "Missing configuration value 'Authentication:SecretForKey'. " +
+        "For local development run: dotnet user-secrets set \"Authentication:SecretForKey\" \"<base64 key>\" --project CarsInfo.Api");
+}
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer(options =>
     {
@@ -83,7 +93,7 @@ builder.Services.AddAuthentication("Bearer")
             ValidateIssuerSigningKey = true,
             ValidIssuer = bearerConfig["ValidIssuer"],
             ValidAudiences = bearerConfig.GetSection("ValidAudiences").Get<string[]>(),
-            IssuerSigningKey = new SymmetricSecurityKey(Convert.FromBase64String(builder.Configuration["Authentication:SecretForKey"]))
+            IssuerSigningKey = new SymmetricSecurityKey(Convert.FromBase64String(secretForKey))
         };
     });
 
@@ -101,23 +111,10 @@ builder.Services.AddApiVersioning(setupAction =>
     setupAction.SubstituteApiVersionInUrl = true;
 });
 
-var apiVersionDescriptionProvider = builder.Services.BuildServiceProvider()
-    .GetRequiredService<IApiVersionDescriptionProvider>();
+builder.Services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
 
 builder.Services.AddSwaggerGen(setupAction =>
 {
-    foreach (var description in apiVersionDescriptionProvider.ApiVersionDescriptions)
-    {
-        setupAction.SwaggerDoc(
-            description.GroupName,
-            new OpenApiInfo
-            {
-                Title = "CarsInfo API",
-                Version = description.ApiVersion.ToString(),
-                Description = "Through this API you can access cars and their points of interest."
-            });
-    }
-
     var xmlCommentsFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlCommentsFullPath = Path.Combine(AppContext.BaseDirectory, xmlCommentsFile);
     setupAction.IncludeXmlComments(xmlCommentsFullPath);

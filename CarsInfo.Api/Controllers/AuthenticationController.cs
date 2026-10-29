@@ -28,7 +28,12 @@ namespace CarsInfo.Api.Controllers
             {
                 return Unauthorized();
             }
-            var securityKey = new SymmetricSecurityKey(Convert.FromBase64String(_configuration["Authentication:SecretForKey"]));
+            var secretForKey = _configuration["Authentication:SecretForKey"];
+            if (string.IsNullOrWhiteSpace(secretForKey))
+            {
+                throw new InvalidOperationException("Missing configuration value 'Authentication:SecretForKey'.");
+            }
+            var securityKey = new SymmetricSecurityKey(Convert.FromBase64String(secretForKey));
 
             var signingCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 

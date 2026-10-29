@@ -14,7 +14,7 @@ namespace CarsInfo.Api.Entities
         public string Name { get; set; }
 
         [MaxLength(200)]
-        public string Description { get; set; }
+        public string Description { get; set; } = string.Empty;
 
         [MaxLength(200)]
         [ForeignKey("CarId")]

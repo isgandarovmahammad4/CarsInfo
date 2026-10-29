@@ -9,8 +9,10 @@ namespace CarsInfo.Api.Services
 
         public CloudMailService(IConfiguration configuration)
         {
-            _mailFrom = configuration["mailSettings:mailFromAddress"];
-            _mailTo = configuration["mailSettings:mailToAddress"];
+            _mailFrom = configuration["mailSettings:mailFromAddress"]
+                ?? throw new InvalidOperationException("Missing configuration value 'mailSettings:mailFromAddress'.");
+            _mailTo = configuration["mailSettings:mailToAddress"]
+                ?? throw new InvalidOperationException("Missing configuration value 'mailSettings:mailToAddress'.");
         }
         public void Send(string subject, string message)
         {

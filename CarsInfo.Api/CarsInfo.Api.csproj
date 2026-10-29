@@ -6,6 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>fa06a9ab-33e5-4cc0-9ba3-1a3c716708a7</UserSecretsId>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <!-- XML docs are generated for Swagger, not for a public library, so not every member needs a comment. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
