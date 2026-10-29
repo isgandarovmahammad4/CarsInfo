@@ -1,6 +1,5 @@
 ﻿using Asp.Versioning;
-using AutoMapper;
-using CarsInfo.Api.Entities;
+using CarsInfo.Api.Mapping;
 using CarsInfo.Api.Models;
 using CarsInfo.Api.Services.Abstraction;
 using Microsoft.AspNetCore.Authorization;
@@ -21,18 +20,15 @@ namespace CarsInfo.Api.Controllers
         private readonly ILogger<PointsOfInterestController> _logger;
         private readonly IMailService _mailService;
         private readonly ICarInfoRepository _carInfoRepository;
-        private readonly IMapper _mapper;
 
         public PointsOfInterestController(ILogger<PointsOfInterestController> logger,
             IMailService mailService,
-            ICarInfoRepository carInfoRepository,
-            IMapper mapper)
+            ICarInfoRepository carInfoRepository)
 
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _mailService = mailService ?? throw new ArgumentNullException(nameof(mailService));
             _carInfoRepository = carInfoRepository ?? throw new ArgumentNullException(nameof(carInfoRepository));
-            _mapper = mapper;
         }
 
         [HttpGet]
@@ -47,7 +43,7 @@ namespace CarsInfo.Api.Controllers
             }
 
             var poi = await _carInfoRepository.GetPointsOfInterestsAsync(carId);
-            return Ok(_mapper.Map<IEnumerable<PointOfInterestDto>>(poi));
+            return Ok(poi.ToDtos());
         }
 
         [HttpGet("{pointofinterestid}", Name = "GetPointOfInterest")]
@@ -64,7 +60,7 @@ namespace CarsInfo.Api.Controllers
             {
                 return NotFound();
             }
-            return Ok(_mapper.Map<PointOfInterestDto>(pointOfInterest));
+            return Ok(pointOfInterest.ToDto());
         }
 
         [HttpPost]
@@ -76,12 +72,12 @@ namespace CarsInfo.Api.Controllers
                 return NotFound();
             }
 
-            var finalPointOfInterest = _mapper.Map<PointOfInterest>(pointOfInterestDto);
+            var finalPointOfInterest = pointOfInterestDto.ToEntity();
 
             await _carInfoRepository.AddPointOfInterestForCarAsync(carId, finalPointOfInterest);
             await _carInfoRepository.SaveChangesAsync();
 
-            var createdPOIToReturn = _mapper.Map<PointOfInterestDto>(finalPointOfInterest);
+            var createdPOIToReturn = finalPointOfInterest.ToDto();
 
             return CreatedAtRoute("GetPointOfInterest", new
             {
@@ -110,7 +106,7 @@ namespace CarsInfo.Api.Controllers
                 return NotFound();
             }
 
-            var poiToPatch = _mapper.Map<PointOfInterestForUpdateDto>(poi);
+            var poiToPatch = poi.ToUpdateDto();
 
             patchDocument.ApplyTo(poiToPatch, ModelState);
 
@@ -123,7 +119,7 @@ namespace CarsInfo.Api.Controllers
                 return BadRequest(ModelState);
             }
 
-            _mapper.Map(poiToPatch, poi);
+            poiToPatch.ApplyTo(poi);
 
             await _carInfoRepository.SaveChangesAsync();
 
@@ -144,7 +140,7 @@ namespace CarsInfo.Api.Controllers
                 return NotFound();
             }
 
-            _mapper.Map(updateDto, poi);
+            updateDto.ApplyTo(poi);
 
             await _carInfoRepository.SaveChangesAsync();
 

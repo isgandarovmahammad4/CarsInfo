@@ -1,5 +1,5 @@
 ﻿using Asp.Versioning;
-using AutoMapper;
+using CarsInfo.Api.Mapping;
 using CarsInfo.Api.Models;
 using CarsInfo.Api.Services;
 using CarsInfo.Api.Services.Abstraction;
@@ -16,13 +16,11 @@ namespace CarsInfo.Api.Controllers
     public class CarsController : ControllerBase
     {
         private readonly ICarInfoRepository _carInfoRepository;
-        private readonly IMapper _mapper;
         private const int MaxPageSize = 20;
 
-        public CarsController(ICarInfoRepository carInfoRepository, IMapper mapper)
+        public CarsController(ICarInfoRepository carInfoRepository)
         {
             _carInfoRepository = carInfoRepository;
-            _mapper = mapper;
         }
 
         [HttpGet]
@@ -35,7 +33,7 @@ namespace CarsInfo.Api.Controllers
 
             Response.Headers["X-Pagination"] = System.Text.Json.JsonSerializer.Serialize(paginationMetadata);
 
-            return Ok(_mapper.Map<IEnumerable<CarWithoutPointsOfInterestDto>>(cars));
+            return Ok(cars.ToCarWithoutPointsOfInterestDtos());
 
         }
 
@@ -61,10 +59,10 @@ namespace CarsInfo.Api.Controllers
 
             if (includePoi)
             {
-                return Ok(_mapper.Map<CarDto>(car));
+                return Ok(car.ToCarDto());
             }
 
-            return Ok(_mapper.Map<CarWithoutPointsOfInterestDto>(car));
+            return Ok(car.ToCarWithoutPointsOfInterestDto());
 
         }
     }

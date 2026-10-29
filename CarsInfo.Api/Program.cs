@@ -72,7 +72,6 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSingleton<FileExtensionContentTypeProvider>();
 builder.Services.AddScoped<ICarInfoRepository, CarInfoRepository>();
-builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 var bearerConfig = builder.Configuration.GetSection("Authentication:Schemes:Bearer");
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer(options =>
