@@ -42,7 +42,7 @@ namespace CarsInfo.Api.Controllers
 
             if (!await _carInfoRepository.CarExist(carId))
             {
-                _logger.LogInformation($"Car with id: {carId} doesnt exist.");
+                _logger.LogInformation("Car with id {CarId} doesn't exist.", carId);
                 return NotFound();
             }
 
@@ -56,7 +56,7 @@ namespace CarsInfo.Api.Controllers
             if (!await CanAccessCar(carId)) return Forbid();
             if (!await _carInfoRepository.CarExist(carId))
             {
-                _logger.LogInformation("City doesnt exist.");
+                _logger.LogInformation("Car with id {CarId} doesn't exist.", carId);
                 return NotFound();
             }
             var pointOfInterest = await _carInfoRepository.GetPointOfInterestsAsync(carId, pointofinterestid);
@@ -175,7 +175,7 @@ namespace CarsInfo.Api.Controllers
 
         private Task<bool> CanAccessCar(int carId)
         {
-            var carName = User.FindFirst("Car 1")?.Value;
+            var carName = User.FindFirst("car")?.Value;
             return _carInfoRepository.CarNameMatchesCarID(carName, carId);
         }
     }

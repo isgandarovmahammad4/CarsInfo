@@ -36,7 +36,7 @@ namespace CarsInfo.Api.Controllers
             claimsForToken.Add(new Claim("sub", user.UserId.ToString()));
             claimsForToken.Add(new Claim("given_name", user.FirstName));
             claimsForToken.Add(new Claim("family_name", user.LastName));
-            claimsForToken.Add(new Claim("Car 1", user.Car));
+            claimsForToken.Add(new Claim("car", user.Car));
 
             var jwtSecurityToken = new JwtSecurityToken(
                 _configuration["Authentication:Issuer"],
@@ -55,13 +55,13 @@ namespace CarsInfo.Api.Controllers
 
         private CarInfoUser ValidateUserCredentials(string? username, string? password)
         {
-            //checking user exist in DB. Then
+            // Demo only: every username/password is accepted and gets access to "Car 1".
+            // Replace with a real user store (hashed passwords) before production use.
             return new CarInfoUser(
-
                 1,
                 username ?? "",
-                "Kevin",
-                "Dockx",
+                "Demo",
+                "User",
                 "Car 1"
             );
         }

@@ -88,14 +88,7 @@ builder.Services.AddAuthentication("Bearer")
         };
     });
 
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("MustBeFromCar1", policy =>
-    {
-        policy.RequireAuthenticatedUser();
-        policy.RequireClaim("Car 1", "Car 1");
-    });
-});
+builder.Services.AddAuthorization();
 
 builder.Services.AddApiVersioning(setupAction =>
 {
