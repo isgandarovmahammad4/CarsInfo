@@ -21,7 +21,7 @@ namespace CarsInfo.Api.Controllers
         [ApiVersion(0.1,Deprecated =true)]
         public ActionResult GetFile(string fileId)
         {
-            var pathToFile = "Boy Artmı.pptx";
+            var pathToFile = "Files/sample.txt";
             if (!System.IO.File.Exists(pathToFile))
             {
                 return NotFound();

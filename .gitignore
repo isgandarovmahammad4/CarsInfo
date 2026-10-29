@@ -366,3 +366,9 @@ FodyWeavers.xsd
 *.db
 *.db-shm
 *.db-wal
+
+# Personal study notes (kept locally, not published)
+/Readme.txt
+
+# Files saved by the upload endpoint
+Uploaded_File_*.pdf
